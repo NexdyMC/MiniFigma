@@ -379,7 +379,7 @@ $(function(){
         Array.from(part).forEach(char=>{
           if(line&&textWidth(s,line+char)>max){lines.push(line);line=char;}else line+=char;
         });
-      });
+      });9
       lines.push(line.trimEnd());
     });
     return lines.length?lines:[''];

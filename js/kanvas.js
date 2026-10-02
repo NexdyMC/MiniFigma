@@ -67,6 +67,7 @@ function draw(){
 	ctx.save();ctx.translate(V.x,V.y);ctx.scale(V.z,V.z);S.forEach(s=>{if(!editingText||s!==editingText.layer)paint(ctx,s);});ctx.restore();
 	ctx.font='11px '+FF;ctx.fillStyle='#9a9a9a';ctx.textBaseline='bottom';S.forEach(s=>{if(s.type==='frame'){const q=w2s(s.x,s.y);ctx.fillText(s.name,q[0],q[1]-4);}});
 	ctx.strokeStyle='#f24822';ctx.lineWidth=1;G.forEach(g=>{ctx.beginPath();if(g.v==='x'){const q=w2s(g.t,0)[0];ctx.moveTo(q,0);ctx.lineTo(q,H);}else{const q=w2s(0,g.t)[1];ctx.moveTo(0,q);ctx.lineTo(W,q);}ctx.stroke();});
+	ctx.strokeStyle='#0d99ff';
 	if(draft&&draft.pts.length){
 		const l=draft.pts[draft.pts.length-1],a=w2s(l.x,l.y);ctx.strokeStyle='#0d99ff';ctx.beginPath();ctx.moveTo(a[0],a[1]);
 		if(hasH(l.ho)){const c1=w2s(l.x+l.ho.x,l.y+l.ho.y);ctx.bezierCurveTo(c1[0],c1[1],mouse.x,mouse.y,mouse.x,mouse.y);}else ctx.lineTo(mouse.x,mouse.y);ctx.stroke();

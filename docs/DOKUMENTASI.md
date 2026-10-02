@@ -9,20 +9,25 @@
 
 ```
 Kamu akan melanjutkan proyek "MiniFigma": editor desain vektor mirip Figma
-yang berjalan di browser, ditulis dalam SATU file HTML, memakai <canvas> 2D.
-Saya melampirkan 2 file: (1) kode proyek, (2) dokumentasi ini.
+yang berjalan di browser, memakai <canvas> 2D. Struktur proyek terdiri dari
+index.html, library lokal di lib/, dan JavaScript per kelompok fitur di js/.
+Dokumentasi proyek berada di docs/DOKUMENTASI.md.
 
 ATURAN WAJIB:
 1. Baca dokumentasi sampai habis sebelum menulis kode.
-2. Tetap SATU file HTML. Jangan pecah jadi banyak file/framework (React, Vue, dll).
-3. Target: laptop spek rendah dan bisa jalan OFFLINE. Hindari library berat.
-4. JANGAN menulis ulang seluruh file. Berikan perubahan sebagai potongan
+2. Pertahankan struktur index.html + file JavaScript per kelompok fitur. Jangan
+  gunakan ES module, bundler, atau framework.
+3. Target: laptop spek rendah dan bisa jalan OFFLINE. Gunakan lib lokal; jangan
+  tambahkan ketergantungan CDN atau library berat.
+4. Kode yang memasang event atau menjalankan inisialisasi didaftarkan lewat
+  MF.init. Ikuti registri dan urutan script pada Bagian 2.
+5. JANGAN menulis ulang seluruh file. Berikan perubahan sebagai potongan
    (cari baris X, ganti dengan Y) atau fungsi utuh yang jelas lokasinya.
-5. Jangan merusak fitur yang sudah ada (lihat Bagian 6, kolom "Sudah").
-6. Pertahankan format JSON proyek dan tambahkan migrasi bila format berubah
+6. Jangan merusak fitur yang sudah ada (lihat Bagian 6, kolom "Sudah").
+7. Pertahankan format JSON proyek dan tambahkan migrasi bila format berubah
    (lihat Bagian 5).
-7. Ikuti gaya kode yang ada (lihat Bagian 8).
-8. Setelah selesai, sebutkan fitur apa yang berubah agar daftar di Bagian 6
+8. Ikuti gaya kode yang ada (lihat Bagian 8).
+9. Setelah selesai, sebutkan fitur apa yang berubah agar daftar di Bagian 6
    bisa saya perbarui.
 
 TUGAS SAYA SEKARANG: <tulis tugasnya di sini, mis. "Tambahkan Copy/Paste/Duplikat (Ctrl+C, Ctrl+V, Ctrl+D)">
@@ -36,41 +41,56 @@ TUGAS SAYA SEKARANG: <tulis tugasnya di sini, mis. "Tambahkan Copy/Paste/Duplika
 |---|---|
 | Nama | MiniFigma — Editor Vektor Offline |
 | Bahasa UI | Indonesia |
-| Bentuk | 1 file HTML (HTML + CSS + JS di dalamnya) |
+| Bentuk | `index.html` + JavaScript terpisah per kelompok fitur |
 | Render | Canvas 2D (bukan SVG/DOM) |
-| Library | jQuery 3.7.1, Tailwind (Play CDN) |
+| Library | jQuery 3.7.1 dan Tailwind, keduanya lokal di `lib/` |
 | Penyimpanan | localStorage (autosave) + ekspor/impor file JSON |
 | Ekspor gambar | PNG |
 | Baris kode | ± 1000 baris, ditulis padat (banyak statement per baris) |
 
-**Masalah offline yang belum selesai:** Tailwind dan jQuery masih diambil dari CDN
-(`cdn.tailwindcss.com` dan `code.jquery.com`). Tanpa internet, UI tidak tampil benar.
+Seluruh library dimuat lokal agar aplikasi dapat dibuka langsung lewat `file://`
+tanpa koneksi internet.
 
 ---
 
 ## 2. Struktur file
 
-Urutan di dalam `<script>` (semuanya di dalam satu `$(function(){ ... })`):
+JavaScript dibagi menurut kepemilikan fitur. Semua script memakai scope global
+biasa (tanpa `import`/`export`); handler dan panggilan awal didaftarkan melalui
+`MF.init` dan dijalankan oleh `js/main.js` setelah seluruh file dimuat.
 
-| Urutan | Bagian | Isi |
+| Urutan | File | Kepemilikan |
 |---|---|---|
-| 1 | Deklarasi state | `S`, `sel`, `multi`, `GR`, `V`, `drag`, `draft`, dll. |
-| 2 | Ikon `P` dan fungsi `I()` | Ikon SVG inline (stroke, 24×24) |
-| 3 | Katalog efek `EFX`, `BM`, `FLT` | Definisi efek dan blend mode |
-| 4 | Seleksi & Grup (`grp-start` … `grp-end`) | Logika grup bersarang |
-| 5 | Model | `bbox`, `seg`, `flat`, `mk`, `pvt`, `rp`, `move`, `geo` |
-| 6 | Gambar | `trace`, `body`, `paint`, `draw` |
-| 7 | Magnet | `snapRect`, `snapPt` |
-| 8 | Hit test | `segDist`, `inPoly`, `hit` |
-| 9 | Mouse | `mousedown`, `mousemove`, `mouseup`, `wheel` |
-| 10 | Pena | `penClick`, `finishPen` |
-| 11 | Toolbar & keyboard | `setTool`, handler `keydown` |
-| 12 | Panel properti | `syncProps`, `renderFx`, handler input |
-| 13 | Layer panel | `renderLayers`, `reorder`, `zmove`, `rename` |
-| 14 | Simpan, riwayat, ekspor | `ser`, `des`, `toJSON`, `fromJSON`, `commit`, `undo`, `redo`, `persist` |
-| 15 | Inisialisasi | `load()`, `fit()`, `refresh()` di baris paling bawah |
+| 1 | `lib/jquery.min.js` | jQuery lokal |
+| 2 | `lib/tailwind.js` | Tailwind lokal |
+| 3 | `js/inti.js` | State bersama, utilitas model, data grup, `MF` |
+| 4 | `js/kanvas.js` | Canvas, paint, hit-test, magnet, dispatcher mouse |
+| 5 | `js/efek.js` | Katalog dan panel efek |
+| 6 | `js/teks.js` | Layout teks, editor kanvas, font lokal |
+| 7 | `js/pena.js` | Pena Bézier dan edit titik |
+| 8 | `js/transformasi.js` | Seleksi, transformasi, overlay |
+| 9 | `js/alat.js` | Toolbar, bentuk, pensil, dispatcher keyboard |
+| 10 | `js/layer.js` | UI layer, grup, urutan, rename |
+| 11 | `js/panel.js` | Panel properti kanan |
+| 12 | `js/clipboard.js` | Copy/paste, gambar, library gambar |
+| 13 | `js/simpan.js` | JSON, migrasi, buka/simpan, ekspor PNG |
+| 14 | `js/performa.js` | Riwayat, undo/redo, autosave |
+| 15 | `js/main.js` | Runner `MF.init` dan pemulihan project |
 
-Komentar penanda di kode: `/* ---------- Nama ---------- */`, `/* fx-end */`, `/* grp-start */`, `/* grp-end */`.
+Urutan tag `<script>` di `index.html` harus sama dengan tabel di atas.
+Baris pertama setiap file fitur berisi komentar kepemilikan: `[6.x] Nama kelompok.
+Isi: ... Bukan di sini: ...`.
+
+### Registri `MF`
+
+- `MF.init`: antrean callback yang dijalankan setelah semua script dimuat.
+- `MF.down`: hook `{p, fn(e, ctx)}`; prioritas naik, `true` menghentikan dispatch.
+- `MF.move[k]` dan `MF.up[k]`: handler berdasarkan `drag.k`.
+- `MF.keys`: callback `fn(e, k)`; `true` berarti shortcut ditangani.
+- `MF.overlay`: callback gambar overlay di atas objek.
+- `MF.beforeMove`: hook sebelum memulai geser, dipakai duplikasi Alt-seret.
+- Prioritas mouse: 10 pan, 20 pena, 30 teks, 40 bentuk, 50 pivot, 60 radius,
+  70 titik/handle pena, 75 resize, 80 rotasi, 90 seleksi/marquee/geser.
 
 ---
 
@@ -135,7 +155,7 @@ Garis (line tool) disimpan sebagai `path` dengan 2 titik tanpa handle.
 ```json
 {
   "app": "MiniFigma",
-  "version": 3,
+  "version": 7,
   "name": "Tanpa judul",
   "view": { "x": 200, "y": 120, "zoom": 1 },
   "settings": { "grid": true, "snap_grid": true, "snap_objects": true },
@@ -295,8 +315,8 @@ Legenda: `[x]` sudah lengkap · `[~]` ada tapi terbatas · `[ ]` belum ada
 ### 6.11 Offline dan performa
 - [x] Seluruh logika berjalan di browser tanpa server
 - [x] Render berbasis event (hemat CPU saat diam)
-- [ ] **Hilangkan CDN Tailwind** (ganti dengan CSS biasa di dalam `<style>`)
-- [ ] **Hilangkan CDN jQuery** (tanam lokal, atau ganti ke JavaScript murni)
+- [x] **Hilangkan CDN Tailwind** (runtime lokal di `lib/tailwind.js`)
+- [x] **Hilangkan CDN jQuery** (`lib/jquery.min.js`)
 - [ ] Riwayat undo yang lebih hemat memori (sekarang menyimpan snapshot penuh JSON × 100)
 - [ ] Culling: tidak menggambar objek di luar layar
 - [ ] Cache `Path2D` untuk jalur kompleks
@@ -331,20 +351,32 @@ Legenda: `[x]` sudah lengkap · `[~]` ada tapi terbatas · `[ ]` belum ada
 
 ## 8. Gaya kode (ikuti agar konsisten)
 
-- Satu file, JavaScript murni + jQuery (`$`), tanpa module/bundler.
-- Gaya **padat**: nama pendek (`s` = shape, `g` = context/grup, `S` = daftar shape), banyak statement per baris. Jangan "merapikan" kode lama kecuali diminta.
-- Selalu panggil `normalize()` setelah mengubah grup atau urutan, `refresh()` setelah mengubah data yang tampil di panel, dan `save()` setelah perubahan yang perlu masuk undo.
-- Fitur baru yang menyimpan properti baru wajib ditambahkan ke **`ser()`** dan **`des()`** (JSON), diberi nilai default, dan pertimbangkan migrasi.
-- UI memakai kelas Tailwind (warna gelap `#2c2c2c`, aksen `#0d99ff`). Bila CDN dihapus, kelas yang dipakai harus diganti dengan CSS biasa.
-- Ikon baru ditambahkan ke objek `P` dalam gaya garis 24×24 (`currentColor`).
-- Teks UI memakai bahasa Indonesia.
+- Pertahankan JavaScript biasa + jQuery (`$`), tanpa ES module, import/export,
+  bundler, atau framework. Aplikasi harus tetap bekerja dengan klik ganda `index.html`.
+- Satu file JavaScript memiliki satu kelompok fitur sesuai Bagian 2. Jangan
+  mendeklarasikan nama top-level yang sama pada file berbeda.
+- Deklarasi fungsi/variabel berada di tingkat atas. Jangan pasang event atau
+  menjalankan inisialisasi saat file dimuat; daftarkan lewat `MF.init`.
+- Gunakan registri `MF.down`, `MF.move`, `MF.up`, `MF.keys`, `MF.overlay`, dan
+  `MF.beforeMove` untuk interaksi bersama. Pasang dispatcher mouse/keyboard sekali.
+- Gaya **padat**: ikuti format kode yang ada; jangan merapikan bagian lain tanpa
+  diminta.
+- Selalu panggil `normalize()` setelah mengubah grup atau urutan, `refresh()`
+  setelah mengubah data yang tampil di panel, dan `save()` setelah perubahan
+  yang perlu masuk undo.
+- Fitur yang mengubah format proyek wajib memperbarui `ser()`, `des()`, default,
+  dan migrasi di `js/simpan.js`. Refactor ini tidak mengubah format JSON.
+- UI memakai kelas Tailwind yang sudah ada; jQuery dan Tailwind dimuat dari
+  `lib/`, bukan CDN. CSS kecil tetap berada di `index.html`.
+- Ikon baru ditambahkan ke objek `P` di `js/inti.js` dalam gaya garis 24×24
+  (`currentColor`). Teks UI dan komentar berbahasa Indonesia.
 - Hindari `requestAnimationFrame` terus-menerus; gambar ulang hanya saat perlu.
 
 ---
 
 ## 9. Catatan masalah / utang teknis yang diketahui
 
-1. **Ketergantungan CDN** (Tailwind dan jQuery): aplikasi tidak jalan tanpa internet.
+1. **Library UI lokal:** Tailwind dan jQuery dimuat dari `lib/`, tidak lagi memerlukan CDN.
 2. **Resize terbatas**: tidak berfungsi untuk objek yang sudah diputar, teks, jalur, dan banyak objek.
 3. **Undo memakai snapshot penuh** (`JSON.stringify` seluruh `S`) hingga 100 langkah: boros memori pada proyek besar.
 4. **Frame tidak memotong (clip) isinya**. "Isi frame" ditentukan dari titik tengah objek yang berada di dalam area frame, bukan dari hubungan induk-anak yang nyata.
@@ -360,7 +392,7 @@ Legenda: `[x]` sudah lengkap · `[~]` ada tapi terbatas · `[ ]` belum ada
 | No | Tugas | Alasan | Tingkat |
 |---|---|---|---|
 | 1 | Copy / Paste / Cut / Duplikat (Ctrl+C/V/X/D, Alt+seret) | Fitur dasar yang paling terasa kurang | Mudah |
-| 2 | Hilangkan CDN: ganti Tailwind dengan CSS lokal, tanam jQuery | Syarat offline penuh dan lebih ringan | Sedang |
+| 2 | Hilangkan CDN: gunakan Tailwind dan jQuery lokal | Selesai pada refactor struktur | Selesai |
 | 3 | Zoom to fit (Shift+1) dan zoom ke seleksi (Shift+2) | Navigasi cepat | Mudah |
 | 4 | Resize penuh (sisi, objek berputar, multi-seleksi, jalur, teks) | Kelemahan terbesar di transformasi | Sulit |
 | 5 | Teks lebih lengkap (multi-baris, font, tebal, rata, edit langsung) | Kebutuhan desain UI | Sedang |

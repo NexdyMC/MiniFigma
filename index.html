@@ -14,6 +14,7 @@
   .num{background:#383838;border-radius:4px;padding:4px 6px;width:100%;font-size:12px;outline:none}
   .num:focus{box-shadow:0 0 0 1px #0d99ff}
   .num:disabled{opacity:.4}
+  #textedit{position:absolute;z-index:5;display:none;box-sizing:border-box;padding:0 1px;border:1px solid #0d99ff;border-radius:1px;background:transparent;outline:none;white-space:pre;user-select:text}
 </style>
 </head>
 <body class="bg-[#2c2c2c] text-neutral-200 text-xs h-screen flex flex-col overflow-hidden select-none">
@@ -50,6 +51,7 @@
   <div id="wrap" class="flex-1 relative bg-[#1e1e1e] overflow-hidden">
     <canvas id="cv" class="absolute inset-0"></canvas>
     <div id="hint" class="absolute bottom-20 left-1/2 -translate-x-1/2 bg-black/60 rounded px-3 py-1.5 pointer-events-none whitespace-nowrap"></div>
+    <input id="textedit" type="text" autocomplete="off" spellcheck="false" aria-label="Edit teks di kanvas">
     <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-[#2c2c2c] border border-black rounded-xl p-1.5 shadow-xl">
       <button class="tool" data-t="select" data-i="select" title="Pilih (V)"></button>
       <button class="tool" data-t="frame" data-i="frame" title="Frame (F)"></button>
@@ -91,8 +93,9 @@
           <label id="rown">Sisi / titik<input id="pn" type="number" min="3" max="20" class="num"></label>
         </div>
         <div id="rowtxt" class="grid grid-cols-3 gap-2">
-          <label class="col-span-2">Teks<input id="ptxt" type="text" class="num"></label>
-          <label>Ukuran<input id="pfs" type="number" min="4" class="num"></label>
+          <label class="col-span-3">Font<select id="pfont" class="num"></select></label>
+          <button id="fontmanage" class="col-span-3 px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600 text-left">Kelola font lokal…</button>
+          <label class="col-span-3">Ukuran<input id="pfs" type="number" min="4" class="num"></label>
         </div>
       </div>
       <div class="p-3 border-b border-neutral-700">
@@ -144,16 +147,35 @@
   <div id="imglib" class="p-3 grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[60vh] overflow-auto"></div>
 </dialog>
 
+<dialog id="fontdlg" class="bg-[#2c2c2c] text-neutral-200 border border-neutral-600 rounded-lg p-0 w-[min(520px,90vw)]">
+  <div class="p-3 border-b border-neutral-700 flex items-center gap-2">
+    <strong class="flex-1">Font lokal</strong>
+    <span id="fontcount" class="text-neutral-400"></span>
+    <button id="fontupload" class="px-2 py-1 rounded bg-[#0d99ff] text-white">Unggah TTF</button>
+    <button id="fontclose" class="px-2 py-1 rounded hover:bg-neutral-700">Tutup</button>
+  </div>
+  <p class="px-3 pt-3 text-neutral-400">Font disimpan di browser ini. Maksimal 1 MB per file dan 2 MB total.</p>
+  <div id="fontlist" class="p-3 space-y-2 max-h-[50vh] overflow-auto"></div>
+</dialog>
+<input id="fontfile" type="file" accept=".ttf,font/ttf,application/x-font-ttf" class="hidden">
+
 <script>
 $(function(){
   const cv=$('#cv')[0], ctx=cv.getContext('2d'), FF='Inter,system-ui,sans-serif';
-  let S=[], sel=null, multi=[], altDown=false, GR={}, gn=1, selG=0, selPt=null, tool='select', V={x:200,y:120,z:1}, uid=1, drag=null, draft=null, mouse={x:0,y:0}, space=false, dpr=1, G=[], imgLib=[], clip=null;
+  let S=[], sel=null, multi=[], altDown=false, GR={}, gn=1, selG=0, selPt=null, tool='select', V={x:200,y:120,z:1}, uid=1, drag=null, draft=null, mouse={x:0,y:0}, space=false, dpr=1, G=[], imgLib=[], clip=null, editingText=null;
   const imageCache=new Map();
+  const FONT_KEY='minifigma.fonts',MAX_FONT=1024*1024,MAX_FONTS_TOTAL=2*1024*1024,MAX_FONTS=10;
+  const FONT_OPTIONS=[
+    ['Default (Inter / system)','Inter,system-ui,sans-serif'],['Arial','Arial'],['Helvetica','Helvetica'],
+    ['Times New Roman','Times New Roman'],['Georgia','Georgia'],['Courier New','Courier New'],
+    ['Monospace','monospace'],['Sans serif','sans-serif'],['Serif','serif'],['Poppins','Poppins'],['Atlas','Atlas']
+  ];
+  let localFonts=[],fontFaces=new Map();
   const SH={rect:'Persegi',line:'Garis',ellipse:'Elips',polygon:'Poligon',star:'Bintang'};
   const NAME={frame:'Frame',rect:'Persegi',ellipse:'Elips',polygon:'Poligon',star:'Bintang',text:'Teks',path:'Vektor',image:'Gambar'};
   const HINT={select:'Klik untuk memilih, seret di area kosong untuk memilih banyak objek (Shift = tambah/kurangi). Spasi + seret = geser, Ctrl + scroll = zoom. Klik dua kali teks untuk mengedit. Dekati sudut dari luar untuk memutar (Shift = 15°, Alt = pivot).',
     pen:'Klik = titik sudut, klik + seret = titik melengkung. Klik titik pertama untuk menutup. Enter / Esc selesai.',
-    pencil:'Seret di kanvas untuk menggambar bebas.',text:'Klik di kanvas untuk menaruh teks.'};
+    pencil:'Seret di kanvas untuk menggambar bebas.',text:'Klik di kanvas lalu ketik. Enter simpan teks, Esc batalkan.'};
   const s2w=(x,y)=>[(x-V.x)/V.z,(y-V.y)/V.z], w2s=(x,y)=>[x*V.z+V.x,y*V.z+V.y];
   const chk=id=>$(id).is(':checked');
   /* Ikon SVG inline (gaya garis, 24x24, mengikuti warna teks lewat currentColor) */
@@ -313,12 +335,50 @@ $(function(){
     p.ho={x:tx*k,y:ty*k};p.hi={x:-tx*k,y:-ty*k};
   }
   function mk(type,x,y){
-    const id=uid++, s={id,type,x,y,w:0,h:0,r:0,rot:0,n:type==='star'?5:3,pts:[],closed:false,text:'Teks',fs:16,fillOn:true,fill:'#d9d9d9',stroke:'#d9d9d9',sw:0,name:NAME[type]+' '+id};
+    const id=uid++, s={id,type,x,y,w:0,h:0,r:0,rot:0,n:type==='star'?5:3,pts:[],closed:false,text:'Teks',fs:16,fontFamily:FF,fillOn:true,fill:'#d9d9d9',stroke:'#d9d9d9',sw:0,name:NAME[type]+' '+id};
     if(type==='frame') s.fill='#ffffff';
     if(type==='path'){s.fillOn=false;s.sw=2;}
     return s;
   }
-  function fitText(s){ctx.font=s.fs+'px '+FF;s.w=ctx.measureText(s.text).width;s.h=s.fs*1.25;}
+  function familyCss(f){
+    f=String(f||FF).replace(/[\u0000-\u001f\u007f]/g,'').slice(0,80);
+    return f==='Inter,system-ui,sans-serif'?FF:/^(serif|sans-serif|monospace|cursive|fantasy|system-ui)$/.test(f)?f:`"${f.replace(/["\\]/g,'\\$&')}"`;
+  }
+  function fontCss(s){return `${s.fs}px ${familyCss(s.fontFamily||FF)}`;}
+  function fitText(s){ctx.font=fontCss(s);s.w=ctx.measureText(s.text).width;s.h=s.fs*1.25;}
+  function positionTextEditor(){
+    if(!editingText)return;
+    const s=editingText.layer,[x,y]=w2s(s.x,s.y),w=Math.max(4,s.w*V.z),h=Math.max(4,s.h*V.z);
+    $('#textedit').css({
+      display:'block',left:x,top:y,width:w+4,height:h+2,fontSize:s.fs*V.z,lineHeight:(s.fs*1.25*V.z)+'px',
+      fontFamily:familyCss(s.fontFamily||FF),color:s.fill,opacity:(s.op??100)/100*(s.fo??100)/100,
+      transformOrigin:`${(s.pvx??.5)*w}px ${(s.pvy??.5)*h}px`,
+      transform:`rotate(${s.rot||0}deg) scale(${s.flipX?-1:1},${s.flipY?-1:1})`
+    });
+  }
+  function startTextEdit(s){
+    editingText={layer:s,original:s.text};const $editor=$('#textedit');
+    $editor.val(s.text).attr('data-color',s.fill);positionTextEditor();
+    requestAnimationFrame(()=>{if(editingText&&editingText.layer===s)$editor.trigger('focus').select();});
+  }
+  function finishTextEdit(commit){
+    if(!editingText)return;
+    const {layer,original}=editingText;
+    if(commit)layer.text=$('#textedit').val();else layer.text=original;
+    fitText(layer);editingText=null;$('#textedit').hide();refresh();if(commit)save();
+  }
+  $('#textedit').on('input',function(){
+    if(!editingText)return;
+    editingText.layer.text=this.value;fitText(editingText.layer);draw();
+  }).on('keydown',e=>{
+    e.stopPropagation();
+    if(e.key==='Enter'){e.preventDefault();finishTextEdit(true);}
+    else if(e.key==='Escape'){e.preventDefault();finishTextEdit(false);}
+  }).on('blur',()=>finishTextEdit(true));
+  $('#fontmanage').click(()=>{renderFontLibrary();$('#fontdlg')[0].showModal();});
+  $('#fontclose').click(()=>$('#fontdlg')[0].close());
+  $('#fontupload').click(()=>$('#fontfile').click());
+  $('#fontfile').on('change',function(){const files=[...this.files];this.value='';if(files.length)addFontFiles(files);});
   function imageFor(src){
     if(!src)return null;
     if(!imageCache.has(src)){const img=new Image();img.onload=draw;img.onerror=draw;img.src=src;imageCache.set(src,img);}
@@ -369,7 +429,7 @@ $(function(){
     }
     if(s.type==='text'){
       if(s.fillOn&&s.fv!==false){
-        g.globalAlpha=op*(s.fo??100)/100;g.font=s.fs+'px '+FF;g.textBaseline='top';g.fillStyle=s.fill;
+        g.globalAlpha=op*(s.fo??100)/100;g.font=fontCss(s);g.textBaseline='top';g.fillStyle=s.fill;
         const nw=g.measureText(s.text).width||1,nh=s.fs*1.25;g.save();g.translate(s.x,s.y);g.scale(s.w/nw,s.h/nh);g.fillText(s.text,0,0);g.restore();
       }
       return;
@@ -472,7 +532,7 @@ $(function(){
       for(let y=((V.y%st)+st)%st;y<H;y+=st){ctx.moveTo(0,y);ctx.lineTo(W,y);}
       ctx.strokeStyle='#333';ctx.lineWidth=1;ctx.stroke();
     }
-    ctx.save();ctx.translate(V.x,V.y);ctx.scale(V.z,V.z);S.forEach(s=>paint(ctx,s));ctx.restore();
+    ctx.save();ctx.translate(V.x,V.y);ctx.scale(V.z,V.z);S.forEach(s=>{if(!editingText||s!==editingText.layer)paint(ctx,s);});ctx.restore();
     ctx.font='11px '+FF;ctx.fillStyle='#9a9a9a';ctx.textBaseline='bottom';
     S.forEach(s=>{if(s.type==='frame'){const q=w2s(s.x,s.y);ctx.fillText(s.name,q[0],q[1]-4);}});
     ctx.strokeStyle='#f24822';ctx.lineWidth=1;
@@ -484,7 +544,7 @@ $(function(){
       if(hasH(l.ho)){const c1=w2s(l.x+l.ho.x,l.y+l.ho.y);ctx.bezierCurveTo(c1[0],c1[1],mouse.x,mouse.y,mouse.x,mouse.y);}else ctx.lineTo(mouse.x,mouse.y);
       ctx.stroke();
     }
-    if(sel){
+    if(sel&&!editingText){
       const cs=corners(sel);
       ctx.beginPath();cs.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.closePath();ctx.stroke();
       ctx.fillStyle='#fff';
@@ -498,13 +558,13 @@ $(function(){
       if(!selG)multi.forEach(s=>{const cs=corners(s);ctx.beginPath();cs.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.closePath();ctx.stroke();});
       const b=ubox(multi),a=w2s(b.x,b.y),c=w2s(b.x+b.w,b.y+b.h);ctx.strokeRect(a[0],a[1],c[0]-a[0],c[1]-a[1]);
     }
-    handlePoints().forEach(q=>{ctx.fillStyle='#fff';ctx.fillRect(q[0]-4,q[1]-4,8,8);ctx.strokeRect(q[0]-4,q[1]-4,8,8);});
+    if(!editingText)handlePoints().forEach(q=>{ctx.fillStyle='#fff';ctx.fillRect(q[0]-4,q[1]-4,8,8);ctx.strokeRect(q[0]-4,q[1]-4,8,8);});
     if(drag&&drag.k==='box'){
       ctx.fillStyle='rgba(13,153,255,.12)';ctx.fillRect(drag.x0,drag.y0,drag.x1-drag.x0,drag.y1-drag.y0);
       ctx.strokeRect(drag.x0,drag.y0,drag.x1-drag.x0,drag.y1-drag.y0);
     }
-    if(canRad(sel)) radH(sel).forEach(q=>{ctx.beginPath();ctx.arc(q[0],q[1],4.5,0,7);ctx.fillStyle='#fff';ctx.fill();ctx.stroke();});
-    if(sel&&((drag&&drag.k==='rot')||pivShown())){
+    if(!editingText&&canRad(sel)) radH(sel).forEach(q=>{ctx.beginPath();ctx.arc(q[0],q[1],4.5,0,7);ctx.fillStyle='#fff';ctx.fill();ctx.stroke();});
+    if(!editingText&&sel&&((drag&&drag.k==='rot')||pivShown())){
       const q=w2s(...pvt(sel));ctx.strokeStyle='#f5a623';ctx.fillStyle='#fff';ctx.lineWidth=1.5;
       ctx.beginPath();ctx.arc(q[0],q[1],5,0,7);ctx.fill();ctx.stroke();
       ctx.beginPath();ctx.arc(q[0],q[1],1.6,0,7);ctx.fillStyle='#f5a623';ctx.fill();
@@ -515,7 +575,7 @@ $(function(){
       ctx.fillStyle='#fff';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(txt,mouse.x+20,mouse.y+23);
     }
     const A=selAll();
-    if(A.length&&!(drag&&drag.k==='box')){
+    if(A.length&&!editingText&&!(drag&&drag.k==='box')){
       const b=A.length>1?ubox(A):bbox(A[0]);let X0=1e9,X1=-1e9,Y1=-1e9;
       A.forEach(s=>corners(s).forEach(q=>{X0=Math.min(X0,q[0]);X1=Math.max(X1,q[0]);Y1=Math.max(Y1,q[1]);}));
       const txt=Math.round(b.w)+' × '+Math.round(b.h),mx=(X0+X1)/2;
@@ -523,7 +583,7 @@ $(function(){
       ctx.fillStyle='#0d99ff';ctx.beginPath();ctx.roundRect(mx-w/2,Y1+8,w,18,4);ctx.fill();
       ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(txt,mx,Y1+17);ctx.textAlign='left';
     }
-    $('#zreset').text(Math.round(V.z*100)+'%');
+    $('#zreset').text(Math.round(V.z*100)+'%');positionTextEditor();
   }
 
   /* ---------- Magnet (grid + objek) ---------- */
@@ -574,7 +634,7 @@ $(function(){
     }
     if(tool!=='select'){[wx,wy]=snapPt(wx,wy);}
     if(tool==='pen') return penClick(wx,wy,sx,sy);
-    if(tool==='text'){setSel([mk('text',wx,wy)]);fitText(sel);S.push(sel);setTool('select');refresh();save();$('#ptxt').focus().select();return;}
+    if(tool==='text'){setSel([mk('text',wx,wy)]);fitText(sel);S.push(sel);setTool('select');refresh();save();startTextEdit(sel);return;}
     if(NEWT[tool]){
       setSel([mk(NEWT[tool],wx,wy)]);
       if(tool==='line'){sel.name='Garis '+sel.id;sel.pts=[{x:wx,y:wy},{x:wx,y:wy}];}
@@ -720,7 +780,7 @@ $(function(){
   $('#shapeMore').click(()=>$('#shapeMenu').toggle());
   $(document).on('mousedown',e=>{if(!$(e.target).closest('#shapeMenu,#shapeMore').length)$('#shapeMenu').hide();});
   $(window).on('keydown',e=>{
-    if($(e.target).is('input')) return;
+    if($(e.target).is('input,textarea,select')) return;
     const k=e.key.toLowerCase();
     if(e.code==='Space'){space=true;e.preventDefault();return;}
     if((e.ctrlKey||e.metaKey)&&e.shiftKey&&k==='v'&&clip){e.preventDefault();pasteClip(0);return;}
@@ -755,6 +815,8 @@ $(function(){
   $(cv).on('dblclick',e=>{
     const sx=e.offsetX,sy=e.offsetY,[wx,wy]=s2w(sx,sy);
     if(draft){draft.pts.pop();finishPen();return;}
+    let topHit=null;for(let i=S.length-1;i>=0;i--)if(hit(S[i],wx,wy)){topHit=S[i];break;}
+    if(topHit&&topHit.type==='text'){setSel([topHit]);refresh();startTextEdit(topHit);return;}
     if(sel&&sel.type==='path'){
       const i=sel.pts.findIndex(p=>{const q=w2s(...rp(sel,p.x,p.y));return Math.hypot(q[0]-sx,q[1]-sy)<8;});
       if(i>=0){togglePt(sel,i);selPt=i;draw();save();return;}
@@ -763,7 +825,6 @@ $(function(){
       let h=null;for(let i=S.length-1;i>=0;i--)if(hit(S[i],wx,wy)){h=S[i];break;}
       if(h&&inGroup(h,selG)){const c=childOf(h,selG);setSel(c?leavesOf(c):[h]);refresh();return;}
     }
-    if(sel&&sel.type==='text')$('#ptxt').focus().select();
   });
 
   /* ---------- Panel ---------- */
@@ -823,7 +884,7 @@ $(function(){
     $('#pbm').val(s.bm||'normal');$('#fxsec').toggle(one);
     $('#pw').val(R(B.w)).prop('disabled',false);$('#ph').val(R(B.h)).prop('disabled',false);$('#par').prop('checked',!!s.ar).prop('disabled',!one);
     $('#rown').toggle(one&&(t==='polygon'||t==='star'));$('#pn').val(s.n);
-    $('#rowtxt').toggle(one&&t==='text');$('#ptxt').val(s.text);$('#pfs').val(s.fs);
+    $('#rowtxt').toggle(one&&t==='text');$('#pfs').val(s.fs);renderFontOptions(s.type==='text'?s.fontFamily:null);
     $('#pop').val(s.op??100);$('#peye').html(I(s.hid?'eyeoff':'eye',14));
     const rr=a.find(x=>x.type==='rect'||x.type==='frame');$('#rowr').toggle(!!rr);$('#rowradii').toggle(!!rr);
     if(rr){const r=rr.radii||[rr.r,rr.r,rr.r,rr.r],uniform=r.every(v=>v===r[0]);$('#pr').val(uniform?r[0]:'');r.forEach((v,i)=>$('#pr'+i).val(v));}
@@ -956,8 +1017,12 @@ $(function(){
     renderFx();draw();save();
   });
   $('#pn').on('input',one(s=>{s.n=Math.round(cl($('#pn').val(),3,20,3));}));
-  $('#ptxt').on('input',one(s=>{s.text=$('#ptxt').val();fitText(s);}));
   $('#pfs').on('input',one(s=>{s.fs=cl($('#pfs').val(),4,999,16);fitText(s);}));
+  $('#pfont').on('change',()=>{
+    if(!sel||sel.type!=='text')return;
+    const s=sel;s.fontFamily=$('#pfont').val();
+    document.fonts.load(fontCss(s)).then(()=>{fitText(s);refresh();save();}).catch(()=>note('Font gagal dimuat: '+s.fontFamily));
+  });
   // tampilan
   $('#pop').on('input',()=>each(s=>{s.op=cl($('#pop').val(),0,100,100);}));
   $('#pr').on('input',()=>each(s=>{if(s.type==='rect'||s.type==='frame'){s.r=Math.max(0,+$('#pr').val()||0);s.radii=[s.r,s.r,s.r,s.r];}}));
@@ -991,14 +1056,14 @@ $(function(){
       v4: + type:"image" dengan setting.image.data_url (Base64); v3 otomatis dimigrasi tanpa perubahan data.
       v5: + flip horizontal/vertikal dan appearance.corner_radii.
      layers diurutkan dari paling belakang (indeks 0) ke paling depan. Titik "vector" disimpan relatif terhadap position. */
-  const FMT_VERSION=5, LS_KEY='minifigma.project', IMG_KEY='minifigma.images', MAX_IMAGE=1024*1024, MAX_IMAGE_TOTAL=1400*1024;
+  const FMT_VERSION=6, LS_KEY='minifigma.project', IMG_KEY='minifigma.images', MAX_IMAGE=1024*1024, MAX_IMAGE_TOTAL=1400*1024;
   let projName='Tanpa judul';
   const rd=v=>Math.round(v*100)/100;
   const num=(v,d)=>(v===null||v===undefined||v===''||!isFinite(+v))?d:+v;
   const pct=(v,d=100)=>Math.min(100,Math.max(0,num(v,d)));
   const col=(v,d)=>{if(typeof v!=='string')return d;v=v.trim();if(/^#[0-9a-f]{3}$/i.test(v))v='#'+[...v.slice(1)].map(c=>c+c).join('');return /^#[0-9a-f]{6}$/i.test(v)?v.toLowerCase():d;};
   const T_OUT={rect:'rectangle',path:'vector'};
-  const MIGRATE={1:d=>d,2:d=>d,3:d=>d,4:d=>d};   // v1 -> v2: hanya menambah properti opsional; nilai default diisi saat impor. Tambahkan fungsi baru di sini setiap format berubah.
+  const MIGRATE={1:d=>d,2:d=>d,3:d=>d,4:d=>d,5:d=>d};   // v1 -> v2: hanya menambah properti opsional; nilai default diisi saat impor. Tambahkan fungsi baru di sini setiap format berubah.
   function migrate(d){let v=Math.floor(num(d.version,1));d={...d};while(v<FMT_VERSION){if(MIGRATE[v])d=MIGRATE[v](d);v++;}d.version=FMT_VERSION;return d;}
   function tree(L,g){
     const out=[],seen=new Set();
@@ -1036,7 +1101,7 @@ $(function(){
     };
     if(s.type==='polygon')st.polygon={sides:s.n};
     if(s.type==='star')st.star={points:s.n};
-    if(s.type==='text')st.text={content:s.text,font_size:s.fs};
+    if(s.type==='text')st.text={content:s.text,font_size:s.fs,font_family:s.fontFamily||FF};
     if(s.type==='image')st.image={data_url:s.src,asset_id:s.assetId||null,source_name:s.sourceName||'Gambar'};
     if(s.type==='rect'||s.type==='frame')st.appearance.corner_radii=(s.radii||[s.r,s.r,s.r,s.r]).map(rd);
     if(s.type==='path')st.path={closed:!!s.closed,points:s.pts.map(p=>{const o={x:rd(p.x-b.x),y:rd(p.y-b.y)};if(hasH(p.ho))o.handle_out={x:rd(p.ho.x),y:rd(p.ho.y)};if(hasH(p.hi))o.handle_in={x:rd(p.hi.x),y:rd(p.hi.y)};return o;})};
@@ -1062,7 +1127,7 @@ $(function(){
     if(typeof l.name==='string'&&l.name.trim())s.name=l.name.trim().slice(0,80);
     if(type==='polygon')s.n=Math.round(Math.min(20,Math.max(3,num(st.polygon&&st.polygon.sides,3))));
     if(type==='star')s.n=Math.round(Math.min(20,Math.max(3,num(st.star&&st.star.points,5))));
-    if(type==='text'){const tx=st.text||{},w=s.w,h=s.h;s.text=String(tx.content??'Teks');s.fs=Math.max(4,num(tx.font_size,16));fitText(s);s.w=w;s.h=h;}
+    if(type==='text'){const tx=st.text||{},w=s.w,h=s.h;s.text=String(tx.content??'Teks');s.fs=Math.max(4,num(tx.font_size,16));s.fontFamily=typeof tx.font_family==='string'&&tx.font_family.length<=80&&tx.font_family?tx.font_family:FF;fitText(s);s.w=w;s.h=h;}
     if(type==='image'){
       const im=st.image||{};if(typeof im.data_url!=='string'||!/^data:image\/(png|jpeg|webp|gif|bmp);base64,/i.test(im.data_url))return null;
       s.src=im.data_url;s.assetId=typeof im.asset_id==='string'?im.asset_id:null;s.sourceName=typeof im.source_name==='string'?im.source_name.slice(0,100):'Gambar';
@@ -1138,6 +1203,91 @@ $(function(){
     try{const d=JSON.parse(localStorage.getItem('minifigma2'));if(d&&Array.isArray(d.S)){S=d.S;uid=d.uid||S.length+1;}}catch(e){}
   }
   function note(m){$('#hint').text(m);}
+  function renderFontOptions(current){
+    const $select=$('#pfont').empty(),options=[...FONT_OPTIONS,...localFonts.map(f=>[f.name,f.name])],seen=new Set();
+    options.forEach(([label,value])=>{if(seen.has(value))return;seen.add(value);$select.append(new Option(label,value));});
+    if(current&&!seen.has(current))$select.append(new Option(current+' (belum terpasang)',current));
+    if(current)$select.val(current);
+  }
+  const fontPayload=data=>data.replace(/^data:font\/ttf;base64,/i,'');
+  function fromBase64(s){
+    const raw=atob(s),bytes=new Uint8Array(raw.length);
+    for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
+    return bytes;
+  }
+  function toBase64(bytes){
+    let raw='';
+    for(let i=0;i<bytes.length;i+=0x8000)raw+=String.fromCharCode(...bytes.subarray(i,i+0x8000));
+    return btoa(raw);
+  }
+  async function activateFont(font){
+    const face=new FontFace(font.name,fromBase64(fontPayload(font.data)));
+    await face.load();document.fonts.add(face);fontFaces.set(font.name,face);
+  }
+  async function loadFontLibrary(){
+    try{
+      const parsed=JSON.parse(localStorage.getItem(FONT_KEY)||'[]');
+      if(!Array.isArray(parsed))throw new Error('Format library font tidak valid.');
+      const seen=new Set();let used=0,count=0;
+      localFonts=parsed.filter(f=>{
+        if(!f||typeof f.name!=='string'||!/^[a-zA-Z0-9 _()-]{1,80}$/.test(f.name)||typeof f.data!=='string'||
+          !/^data:font\/ttf;base64,[A-Za-z0-9+/]+=*$/i.test(f.data)||!Number.isFinite(+f.bytes)||+f.bytes<1||+f.bytes>MAX_FONT||
+          fontPayload(f.data).length>4*Math.ceil(MAX_FONT/3)||seen.has(f.name.toLowerCase())||count>=MAX_FONTS||used+(+f.bytes)>MAX_FONTS_TOTAL)return false;
+        seen.add(f.name.toLowerCase());used+=+f.bytes;count++;return true;
+      });
+      let warning=null;
+      for(const font of localFonts){
+        try{await activateFont(font);}catch(e){warning='Font lokal gagal dimuat: '+font.name;}
+      }
+      return warning;
+    }catch(e){localFonts=[];return 'Library font lokal gagal dibaca: '+e.message;}
+  }
+  function saveFontLibrary(next){
+    try{localStorage.setItem(FONT_KEY,JSON.stringify(next));localFonts=next;return true;}
+    catch(e){note('Font tidak dapat disimpan: ruang localStorage penuh.');return false;}
+  }
+  function renderFontLibrary(){
+    const $list=$('#fontlist').empty();$('#fontcount').text(localFonts.length+' / '+MAX_FONTS);
+    if(!localFonts.length)$list.append($('<p class="text-neutral-400">Belum ada font kustom. Pilih file TTF untuk menambah font.</p>'));
+    localFonts.forEach(font=>{
+      const $row=$('<div class="flex items-center gap-2 rounded bg-[#383838] px-3 py-2"></div>').appendTo($list);
+      $('<span class="flex-1 truncate"></span>').text(font.name+' · '+Math.ceil(font.bytes/1024)+' KB').appendTo($row);
+      $('<button class="px-2 py-1 rounded hover:bg-neutral-600">Hapus</button>').appendTo($row).on('click',()=>{
+        const next=localFonts.filter(f=>f.name!==font.name);
+        if(!saveFontLibrary(next))return;
+        const face=fontFaces.get(font.name);if(face)document.fonts.delete(face);fontFaces.delete(font.name);
+        let changed=false;
+        S.forEach(s=>{if(s.type==='text'&&s.fontFamily===font.name){s.fontFamily=FF;fitText(s);changed=true;}});
+        if(changed){refresh();save();}
+        renderFontLibrary();renderFontOptions(sel&&sel.type==='text'?sel.fontFamily:null);
+      });
+    });
+  }
+  function fontMagic(bytes){
+    return bytes.length>=4&&((bytes[0]===0&&bytes[1]===1&&bytes[2]===0&&bytes[3]===0)||
+      String.fromCharCode(...bytes.subarray(0,4))==='true');
+  }
+  async function addFontFiles(files){
+    for(const file of [...files]){
+      const name=file.name.replace(/\.ttf$/i,'').replace(/[^a-zA-Z0-9 _()-]/g,' ').trim();
+      if(!/\.ttf$/i.test(file.name)){note('Pilih file font dengan ekstensi .ttf.');continue;}
+      if(!name){note('Nama font tidak valid.');continue;}
+      if(localFonts.length>=MAX_FONTS){note('Maksimal '+MAX_FONTS+' font lokal.');break;}
+      if(file.size>MAX_FONT){note('Ukuran font maksimal 1 MB per file.');continue;}
+      if(localFonts.some(f=>f.name.toLowerCase()===name.toLowerCase())){note('Font "'+name+'" sudah terpasang.');continue;}
+      const used=localFonts.reduce((n,f)=>n+(+f.bytes||0),0);
+      if(used+file.size>MAX_FONTS_TOTAL){note('Total font lokal dibatasi 2 MB.');break;}
+      try{
+        const bytes=new Uint8Array(await file.arrayBuffer());
+        if(!fontMagic(bytes)){note('File tidak memiliki signature TrueType yang valid.');continue;}
+        const font={name,data:'data:font/ttf;base64,'+toBase64(bytes),bytes:file.size};
+        await activateFont(font);
+        if(!saveFontLibrary([...localFonts,font])){const face=fontFaces.get(name);if(face)document.fonts.delete(face);fontFaces.delete(name);continue;}
+        renderFontLibrary();renderFontOptions(sel&&sel.type==='text'?sel.fontFamily:null);
+        note('Font "'+name+'" berhasil dipasang dan disimpan di browser ini.');
+      }catch(e){note('Gagal memasang font "'+name+'": '+e.message);}
+    }
+  }
   function saveImageLibrary(){try{localStorage.setItem(IMG_KEY,JSON.stringify(imgLib));return true;}catch(e){return false;}}
   function loadImageLibrary(){
     try{const a=JSON.parse(localStorage.getItem(IMG_KEY)||'[]');if(Array.isArray(a))imgLib=a.filter(x=>x&&typeof x.src==='string'&&/^data:image\/(png|jpeg|webp|gif|bmp);base64,/i.test(x.src)).slice(0,6);}catch(e){imgLib=[];}
@@ -1239,7 +1389,7 @@ $(function(){
     cv.width=r.width*dpr;cv.height=r.height*dpr;cv.style.width=r.width+'px';cv.style.height=r.height+'px';draw();
   }
   $(window).on('resize',fit);
-  load();hist=[snap()];hp=0;updHist();setTool('select');fit();refresh();
+  loadFontLibrary().then(warning=>{load();hist=[snap()];hp=0;updHist();setTool('select');fit();refresh();if(warning)note(warning);});
 });
 </script>
 </body>

@@ -163,11 +163,12 @@ Garis (line tool) disimpan sebagai `path` dengan 2 titik tanpa handle.
 
 - `layers` diurutkan dari paling **belakang** (indeks 0) ke paling depan.
 - Tipe di JSON: `frame`, `rectangle`, `ellipse`, `polygon`, `star`, `text`, `line`, `vector`, `group`.
-- Properti khusus: `setting.polygon.sides`, `setting.star.points`, `setting.text.{content,font_size}`, `setting.path.{closed, points[]}`.
+- Properti khusus: `setting.polygon.sides`, `setting.star.points`, `setting.text.{content,font_size,font_family}`, `setting.path.{closed, points[]}`.
 - Titik `vector` disimpan relatif terhadap `position`; `handle_in` dan `handle_out` untuk Bézier.
-- Riwayat versi: v1 (dasar) → v2 (pivot, blend mode, efek) → v3 (grup, handle Bézier).
+- Riwayat versi: v1 (dasar) → v2 (pivot, blend mode, efek) → v3 (grup, handle Bézier) → v4 (bitmap) → v5 (flip/radius sudut) → v6 (font teks).
 - **Jika format berubah:** naikkan `FMT_VERSION`, tambahkan fungsi di objek `MIGRATE`, dan isi nilai default saat impor di `des()`.
 - Autosave: kunci localStorage `minifigma.project`.
+- Font TTF kustom disimpan terpisah di localStorage `minifigma.fonts`; file font tidak disertakan dalam ekspor JSON.
 
 ---
 
@@ -198,7 +199,7 @@ Legenda: `[x]` sudah lengkap · `[~]` ada tapi terbatas · `[ ]` belum ada
 - [x] Poligon (3–20 sisi; menu dropdown atau Shift+R)
 - [x] Bintang (3–20 titik; menu dropdown atau Shift+O)
 - [x] Pena Bézier (P)
-- [~] Teks (T): satu baris, satu font, diedit lewat panel (belum bisa edit langsung di kanvas)
+- [x] Teks (T): satu baris; edit langsung di kanvas dengan klik dua kali; pilihan font dan font TTF lokal tersimpan di browser
 - [x] Pensil / gambar bebas (B)
 - [x] Impor gambar (bitmap; library lokal, drag-and-drop, atau paste)
 - [x] Shortcut untuk poligon/bintang (Shift+R / Shift+O)
@@ -345,13 +346,12 @@ Legenda: `[x]` sudah lengkap · `[~]` ada tapi terbatas · `[ ]` belum ada
 
 1. **Ketergantungan CDN** (Tailwind dan jQuery): aplikasi tidak jalan tanpa internet.
 2. **Resize terbatas**: tidak berfungsi untuk objek yang sudah diputar, teks, jalur, dan banyak objek.
-3. **Handler keyboard** hanya mengabaikan elemen `input`; elemen `select` (mis. dropdown Blend) belum diabaikan, sehingga mengetik huruf saat dropdown fokus bisa memicu pintasan alat.
-4. **Undo memakai snapshot penuh** (`JSON.stringify` seluruh `S`) hingga 100 langkah: boros memori pada proyek besar.
-5. **Frame tidak memotong (clip) isinya**. "Isi frame" ditentukan dari titik tengah objek yang berada di dalam area frame, bukan dari hubungan induk-anak yang nyata.
-6. **Ekspor PNG** mengekspor semua objek terlihat sekaligus; belum ada pilihan seleksi/skala.
-7. **Background blur** menyalin seluruh kanvas per objek: berat jika dipakai banyak.
-8. **Edit teks** hanya lewat panel kanan, bukan langsung di kanvas.
-9. **Kunci localStorage** hanya satu proyek (`minifigma.project`); belum ada daftar banyak proyek.
+3. **Undo memakai snapshot penuh** (`JSON.stringify` seluruh `S`) hingga 100 langkah: boros memori pada proyek besar.
+4. **Frame tidak memotong (clip) isinya**. "Isi frame" ditentukan dari titik tengah objek yang berada di dalam area frame, bukan dari hubungan induk-anak yang nyata.
+5. **Ekspor PNG** mengekspor semua objek terlihat sekaligus; belum ada pilihan seleksi/skala.
+6. **Background blur** menyalin seluruh kanvas per objek: berat jika dipakai banyak.
+7. **Font TTF kustom** tersimpan pada browser/perangkat ini dan tidak ikut dalam file JSON proyek.
+8. **Kunci localStorage** hanya satu proyek (`minifigma.project`); belum ada daftar banyak proyek.
 
 ---
 

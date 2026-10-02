@@ -1,0 +1,2 @@
+                                                                                                                                                                                                                                                                                                                                                                                      /* [6.1] Runner aplikasi. Isi: menjalankan antrean MF.init setelah semua script termuat. Bukan di sini: deklarasi fitur atau handler. */
+MF.init.forEach(fn=>fn());

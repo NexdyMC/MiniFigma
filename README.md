@@ -130,7 +130,7 @@ Garis (line tool) disimpan sebagai `path` dengan 2 titik tanpa handle.
 
 ---
 
-## 5. Format file JSON (versi 3)
+## 5. Format file JSON (versi 7)
 
 ```json
 {
@@ -163,9 +163,9 @@ Garis (line tool) disimpan sebagai `path` dengan 2 titik tanpa handle.
 
 - `layers` diurutkan dari paling **belakang** (indeks 0) ke paling depan.
 - Tipe di JSON: `frame`, `rectangle`, `ellipse`, `polygon`, `star`, `text`, `line`, `vector`, `group`.
-- Properti khusus: `setting.polygon.sides`, `setting.star.points`, `setting.text.{content,font_size,font_family}`, `setting.path.{closed, points[]}`.
+- Properti khusus: `setting.polygon.sides`, `setting.star.points`, `setting.text.{content,font_size,font_family,bold,italic,underline,alignment,line_height,letter_spacing,fixed_width}`, `setting.path.{closed, points[]}`.
 - Titik `vector` disimpan relatif terhadap `position`; `handle_in` dan `handle_out` untuk Bézier.
-- Riwayat versi: v1 (dasar) → v2 (pivot, blend mode, efek) → v3 (grup, handle Bézier) → v4 (bitmap) → v5 (flip/radius sudut) → v6 (font teks).
+- Riwayat versi: v1 (dasar) → v2 (pivot, blend mode, efek) → v3 (grup, handle Bézier) → v4 (bitmap) → v5 (flip/radius sudut) → v6 (font teks) → v7 (layout dan gaya teks).
 - **Jika format berubah:** naikkan `FMT_VERSION`, tambahkan fungsi di objek `MIGRATE`, dan isi nilai default saat impor di `des()`.
 - Autosave: kunci localStorage `minifigma.project`.
 - Font TTF kustom disimpan terpisah di localStorage `minifigma.fonts`; file font tidak disertakan dalam ekspor JSON.
@@ -199,7 +199,7 @@ Legenda: `[x]` sudah lengkap · `[~]` ada tapi terbatas · `[ ]` belum ada
 - [x] Poligon (3–20 sisi; menu dropdown atau Shift+R)
 - [x] Bintang (3–20 titik; menu dropdown atau Shift+O)
 - [x] Pena Bézier (P)
-- [x] Teks (T): satu baris; edit langsung di kanvas dengan klik dua kali; pilihan font dan font TTF lokal tersimpan di browser
+- [x] Teks (T): multi-baris, kotak lebar tetap, gaya font, alignment, spacing, dan edit langsung di kanvas
 - [x] Pensil / gambar bebas (B)
 - [x] Impor gambar (bitmap; library lokal, drag-and-drop, atau paste)
 - [x] Shortcut untuk poligon/bintang (Shift+R / Shift+O)
@@ -269,10 +269,10 @@ Legenda: `[x]` sudah lengkap · `[~]` ada tapi terbatas · `[ ]` belum ada
 
 ### 6.8 Teks
 - [x] Isi teks dan ukuran font
-- [ ] Teks multi-baris dan kotak teks dengan lebar tetap
-- [ ] Pilihan font (family), tebal, miring, garis bawah
-- [ ] Rata kiri / tengah / kanan, jarak baris, jarak huruf
-- [ ] Edit teks langsung di kanvas
+- [x] Teks multi-baris dan kotak teks dengan lebar tetap
+- [x] Pilihan font (family), tebal, miring, garis bawah
+- [x] Rata kiri / tengah / kanan, jarak baris, jarak huruf
+- [x] Edit teks langsung di kanvas (Enter = baris baru, Ctrl+Enter = selesai)
 
 ### 6.9 Riwayat, simpan, ekspor
 - [x] Undo/Redo (maks. 100 langkah): Ctrl+Z, Ctrl+Shift+Z / Ctrl+Y
@@ -381,4 +381,4 @@ Legenda: `[x]` sudah lengkap · `[~]` ada tapi terbatas · `[ ]` belum ada
 
 ---
 
-*Dokumen dibuat berdasarkan pembacaan kode MiniFigma (format JSON v3).*
+*Dokumen diperbarui berdasarkan kode MiniFigma (format JSON v7).*

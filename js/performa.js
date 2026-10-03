@@ -8,6 +8,9 @@ function commit(){
 	let size=hist.reduce((n,x)=>n+x.length,0);while(hist.length>1&&(hist.length>100||size>HIST_LIMIT)){size-=hist.shift().length;hp--;}updHist();
 }
 function restore(str){
+	if(typeof closeCombo==='function')closeCombo();
+	if(document.activeElement&&document.activeElement.closest('#props'))document.activeElement.blur();
+	if(svT){clearTimeout(svT);svT=null;}
 	const d=JSON.parse(str),ids=selAll().map(x=>x.id);S=d.S;uid=d.uid;GR=d.GR||{};gn=d.gn||1;guides=Array.isArray(d.guides)?d.guides:[];draft=null;
 	setSel(S.filter(x=>ids.includes(x.id)));refresh();persist();updHist();
 }

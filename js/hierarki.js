@@ -1,5 +1,4 @@
 /* [6.13] Hierarki frame. Isi: relasi induk-anak dan inferensi kompatibel untuk dokumen lama. */
-let hoveredFrame=null;
 function nearestFrameParent(s){
 	const b=bbox(s),cx=b.x+b.w/2,cy=b.y+b.h/2;
 	return S.filter(f=>f.type==='frame'&&f!==s&&S.indexOf(f)<S.indexOf(s)&&
@@ -55,8 +54,7 @@ function frameTitleAt(sx,sy){
 	return null;
 }
 function updateFrameHover(c){
-	const title=frameTitleAt(c.sx,c.sy),frame=title||S.slice().reverse().find(item=>item.type==='frame'&&hit(item,c.wx,c.wy))||null;
-	if(frame!==hoveredFrame){hoveredFrame=frame;draw();}
+	const title=frameTitleAt(c.sx,c.sy);
 	if(title){cv.style.cursor=frameEffectivelyLocked(title)?'not-allowed':'move';return true;}
 	return false;
 }
@@ -88,19 +86,6 @@ function drawFrameHierarchyOverlay(ctx){
 		const q=[[target.x,target.y],[target.x+target.w,target.y],[target.x+target.w,target.y+target.h],[target.x,target.y+target.h]].map(p=>w2s(...rp(target,...p)));
 		ctx.save();ctx.strokeStyle='#0d99ff';ctx.lineWidth=2.5;ctx.beginPath();q.forEach((point,i)=>ctx[i?'lineTo':'moveTo'](point[0],point[1]));ctx.closePath();ctx.stroke();ctx.restore();
 	}
-	if(hoveredFrame&&!frameEffectivelyHidden(hoveredFrame)){
-		const q=[[hoveredFrame.x,hoveredFrame.y],[hoveredFrame.x+hoveredFrame.w,hoveredFrame.y],[hoveredFrame.x+hoveredFrame.w,hoveredFrame.y+hoveredFrame.h],[hoveredFrame.x,hoveredFrame.y+hoveredFrame.h]].map(p=>w2s(...rp(hoveredFrame,...p)));
-		ctx.save();ctx.strokeStyle='rgba(13,153,255,.8)';ctx.lineWidth=1;
-		ctx.beginPath();
-		q.forEach((point,i)=>ctx[i?'lineTo':'moveTo'](point[0],point[1]));
-		ctx.closePath();
-		ctx.stroke();
-		kidsOf(hoveredFrame).filter(child=>!frameEffectivelyHidden(child)).forEach(child=>{
-			const b=bbox(child),cs=[[b.x,b.y],[b.x+b.w,b.y],[b.x+b.w,b.y+b.h],[b.x,b.y+b.h]].map(p=>w2s(...rp(child,...p)));
-			ctx.beginPath();cs.forEach((p,i)=>ctx[i?'lineTo':'moveTo'](p[0],p[1]));ctx.closePath();ctx.stroke();
-		});
-		ctx.restore();
-	}
 }
 function frameMoveRoots(items){
 	return items.filter(s=>!items.some(parent=>parent!==s&&parent.type==='frame'&&kidsOf(parent).includes(s)));
@@ -131,6 +116,7 @@ MF.init.push(function initFrameHierarchyCanvas(){
 		e.preventDefault();e.stopImmediatePropagation();setSel([frame]);refresh();editFrameTitle(frame);
 	});
 	MF.down.push({p:40,fn(e,c){
+		if(e.shiftKey)return false;
 		const frame=frameTitleAt(c.sx,c.sy);
 		if(!frame)return false;
 		if(!frameEffectivelyLocked(frame)){

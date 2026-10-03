@@ -29,16 +29,16 @@ function reorder(src,tgt,up){
 		its.forEach(s=>setFrameParent(s,parentFrame));
 	}
 	if(src.g){if(gid&&(gid===src.g||groupIn(gid,src.g)))return;GR[src.g].pid=gid;}else its.forEach(x=>{x.gid=gid;});
-	const i=rest.indexOf(anchor)+(above?1:0);S=[...rest.slice(0,i),...its,...rest.slice(i)];normalize();refresh();save();
+	const i=rest.indexOf(anchor)+(above?1:0);S=[...rest.slice(0,i),...its,...rest.slice(i)];normalize();refreshHoverAtPointer(null);refresh();save();
 }
-function zmove(m){
+function zmove(m,e){
 	const a=selAll();if(!a.length)return;
 	if(m==='front'||m==='back'){const it=S.filter(x=>a.includes(x)),rest=S.filter(x=>!a.includes(x));S=m==='front'?[...rest,...it]:[...it,...rest];}
 	else{
 		const A=[...S];if(m==='fwd'){for(let i=A.length-2;i>=0;i--)if(a.includes(A[i])&&!a.includes(A[i+1]))[A[i],A[i+1]]=[A[i+1],A[i]];}
 		else{for(let i=1;i<A.length;i++)if(a.includes(A[i])&&!a.includes(A[i-1]))[A[i],A[i-1]]=[A[i-1],A[i]];}S=A;
 	}
-	normalize();refresh();save();
+	normalize();refreshHoverAtPointer(e);refresh();save();
 }
 function rename(s){
 	const $li=$('#layers li').filter((i,el)=>$(el).data('s')===s),$n=$li.find('.nm');if(!$n.length)return;
@@ -91,7 +91,7 @@ function renderLayers(){
 MF.init.push(function initLayers(){
 	$('#layers').on('dragover',e=>e.preventDefault()).on('drop',e=>{if(e.target===e.currentTarget&&dnd&&S.length){e.preventDefault();reorder(dnd,{top:true},true);}dnd=null;});
 	MF.keys.push((e,k)=>{
-		if((e.ctrlKey||e.metaKey)&&(e.code==='BracketLeft'||e.code==='BracketRight')){e.preventDefault();zmove(e.code==='BracketRight'?(e.shiftKey?'front':'fwd'):(e.shiftKey?'back':'bwd'));return true;}
+		if((e.ctrlKey||e.metaKey)&&(e.code==='BracketLeft'||e.code==='BracketRight')){e.preventDefault();zmove(e.code==='BracketRight'?(e.shiftKey?'front':'fwd'):(e.shiftKey?'back':'bwd'),e);return true;}
 		if((e.ctrlKey||e.metaKey)&&k==='g'){e.preventDefault();e.shiftKey?ungroupSel():groupSel();return true;}
 		if(e.key==='F2'&&sel){e.preventDefault();rename(sel);return true;}return false;
 	});

@@ -3,41 +3,127 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MiniFigma — Editor Vektor Offline</title>
+<title>MiniFigma — Offline Vector Editor</title>
 
 <style>
+  :root{--mf-panel:#2c2c2c;--mf-divider:#383838;--mf-input:#383838;--mf-muted:#b3b3b3;--mf-icon:#8c8c8c;--mf-active:#0d99ff}
   body{font-family:Inter,system-ui,Segoe UI,sans-serif}
   input[type=color]{width:24px;height:24px;padding:0;border:0;background:none;cursor:pointer}
   .tool.on{background:#0d99ff;color:#fff}
   .txt-toggle.on{background:#0d99ff;color:#fff}
-  .num{background:#383838;border-radius:4px;padding:4px 6px;width:100%;font-size:12px;outline:none}
-  .num:focus{box-shadow:0 0 0 1px #0d99ff}
+  .num{background:var(--mf-input);border:1px solid transparent;border-radius:5px;padding:4px 6px;width:100%;height:32px;font-size:12px;color:#fff;outline:none}
+  .num:hover{border-color:#4a4a4a}
+  .num:focus{border-color:var(--mf-active);box-shadow:none}
   .num:disabled{opacity:.4}
-  #textedit{position:absolute;z-index:5;display:none;box-sizing:border-box;padding:0 1px;border:1px solid #0d99ff;border-radius:1px;background:transparent;outline:none;white-space:pre-wrap;overflow-wrap:anywhere;overflow:hidden;resize:none;user-select:text}
+  .num::-webkit-inner-spin-button,.num::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+  .num[type=number]{appearance:textfield;-moz-appearance:textfield}
+  .props-scroll{overflow-y:auto;scrollbar-width:thin;scrollbar-color:#444 transparent}
+  .props-scroll::-webkit-scrollbar{width:8px}
+  .props-scroll::-webkit-scrollbar-track{background:transparent}
+  .props-scroll::-webkit-scrollbar-thumb{background:#444;border-radius:8px}
+  #props{background:var(--mf-panel);min-height:100%}
+  .mf-panel-title{padding:12px 16px;font-size:12px;font-weight:600;color:#fff;border-bottom:1px solid var(--mf-divider)}
+  .mf-section{padding:8px 16px 12px;border-bottom:1px solid var(--mf-divider)}
+  .mf-section-head{display:flex;align-items:center;min-height:24px;margin-bottom:10px;color:#fff;font-size:11px;font-weight:600;cursor:pointer}
+  .mf-section-head .mf-actions{display:flex;align-items:center;gap:2px;margin-left:auto}
+  .mf-section-head .mf-section-chevron{width:14px;height:14px;color:var(--mf-icon);transition:transform .12s}
+  .mf-section.is-collapsed>.mf-section-head{margin-bottom:0}
+  .mf-section.is-collapsed>.mf-section-head .mf-section-chevron{transform:rotate(-90deg)}
+  .mf-section.is-collapsed>.mf-section-body{display:none}
+  .mf-section-body{display:grid;gap:10px}
+  .mf-subsection{padding:0;border:0}
+  .mf-subsection>.mf-section-head{margin:0;color:var(--mf-muted);font-size:10px}
+  .mf-label{display:block;margin-bottom:4px;color:var(--mf-muted);font-size:11px}
+  .mf-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .mf-control{position:relative;display:flex;align-items:center;min-width:0;height:32px;background:var(--mf-input);border:1px solid transparent;border-radius:5px}
+  .mf-control:hover{border-color:#4a4a4a}
+  .mf-control:focus-within{border-color:var(--mf-active)}
+  .mf-control .mf-input{min-width:0;width:100%;height:100%;border:0;outline:0;background:transparent;color:#fff;padding:0 7px;font-size:12px;appearance:textfield}
+  .mf-control .mf-input:focus{box-shadow:none}
+  .mf-prefix{display:flex;align-items:center;justify-content:center;flex:none;min-width:25px;height:100%;padding:0 5px;color:var(--mf-icon);font-size:12px;cursor:ew-resize;user-select:none}
+  .mf-prefix svg{width:14px;height:14px}
+  .mf-suffix{flex:none;padding:0 7px;color:#8c8c8c;font-size:11px}
+  .mf-combo{position:relative;min-width:0}
+  .mf-combo>.mf-control{padding-right:26px}
+  .mf-inline-combo{display:inline-flex;min-width:58px;flex:0 0 72px;vertical-align:middle}
+  .mf-inline-combo .mf-control{height:28px}
+  .mf-inline-combo .mf-control .mf-input{padding-left:7px;padding-right:3px}
+  .mf-inline-combo .mf-combo-toggle{height:24px;width:20px}
+  .mf-inline-combo .mf-control{padding-right:22px}
+  .mf-inline-combo .mf-suffix{padding:0 3px}
+  .mf-combo-toggle{position:absolute;right:1px;top:1px;display:flex;align-items:center;justify-content:center;width:24px;height:28px;border:0;border-radius:4px;background:transparent;color:#aaa;cursor:pointer}
+  .mf-combo-toggle:hover{background:#444;color:#fff}
+  .mf-icon-btn{display:inline-flex;align-items:center;justify-content:center;flex:none;width:24px;height:24px;padding:0;border:0;border-radius:4px;background:transparent;color:#b3b3b3;cursor:pointer}
+  .mf-icon-btn:hover{background:#444;color:#fff}
+  .mf-icon-btn.on{background:rgba(13,153,255,.3);color:#fff}
+  .mf-align{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+  .mf-align .mf-icon-btn{width:100%;background:#383838}
+  .mf-actions-row{display:flex;gap:4px}
+  .mf-segmented{display:flex;gap:2px;padding:2px;border-radius:6px;background:#383838}
+  .mf-segmented .mf-icon-btn{flex:1}
+  .mf-segmented .mf-icon-btn.on{background:#0d99ff;color:#fff}
+  .mf-switch{position:relative;width:28px;height:16px;appearance:none;border:0;border-radius:10px;background:#555;cursor:pointer}
+  .mf-switch:before{content:"";position:absolute;left:2px;top:2px;width:12px;height:12px;border-radius:50%;background:#ddd;transition:transform .12s}
+  .mf-switch:checked{background:#0d99ff}
+  .mf-switch:checked:before{transform:translateX(12px);background:#fff}
+  .mf-color{position:relative;width:16px;height:16px;overflow:hidden;flex:none;border:1px solid #ffffff40;border-radius:3px;background-color:#383838}
+  .mf-color.checker{background-image:linear-gradient(45deg,#555 25%,transparent 25%),linear-gradient(-45deg,#555 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#555 75%),linear-gradient(-45deg,transparent 75%,#555 75%);background-size:8px 8px;background-position:0 0,0 4px,4px -4px,-4px 0}
+  .mf-color.mixed{background-image:repeating-linear-gradient(135deg,#4a4a4a 0 3px,#383838 3px 6px)}
+  .mf-color input{position:absolute;inset:0;width:100%;height:100%;opacity:0}
+  .mf-paint-row{display:flex;align-items:center;gap:4px;min-height:32px}
+  .mf-paint-row .mf-paint-label{display:none}
+  .mf-paint-row .mf-hex{height:28px;flex:1;min-width:32px;background:#383838;border:1px solid transparent;border-radius:5px;padding:0 6px;color:#fff;font-size:11px;text-transform:uppercase;outline:none}
+  .mf-paint-row .mf-hex:hover{border-color:#4a4a4a}
+  .mf-paint-row .mf-hex:focus{border-color:#0d99ff}
+  .mf-card{padding:8px;border-radius:6px;background:#333}
+  .mf-section-body>.mf-card{padding:6px;background:#333}
+  .mf-combo-empty{padding:8px;color:#b3b3b3;font-size:12px}
+  .mf-combo-popup{position:fixed;z-index:20000;display:none;min-width:min(180px,calc(100vw - 16px));max-width:min(300px,calc(100vw - 16px));max-height:60vh;overflow:auto;padding:6px;background:#2c2c2c;border:1px solid #000;border-radius:12px;box-shadow:0 12px 32px #000b;color:#fff}
+  .mf-combo-popup.open{display:block}
+  .mf-combo-item{display:flex;align-items:center;gap:8px;width:100%;min-height:28px;padding:4px 9px;border:0;border-radius:6px;background:transparent;color:#fff;text-align:left;font-size:13px;font-weight:600;cursor:pointer}
+  .mf-combo-item:hover,.mf-combo-item.active{background:#0d99ff}
+  .mf-combo-check{width:14px;height:14px;flex:none;color:#fff}
+  .mf-hidden{display:none!important}
+  #textedit{position:absolute;z-index:5;display:none;box-sizing:border-box;padding:0 1px;border:1px solid #0d99ff;border-radius:1px;background:transparent;outline:none;white-space:pre-wrap;overflow-wrap:break-word;overflow:hidden;resize:none;user-select:text}
+  #mfContextMenu{position:fixed;z-index:10000;width:240px;max-height:calc(100vh - 8px);overflow-y:auto;background:#2c2c2c;border:1px solid #000;border-radius:8px;box-shadow:0 12px 28px #0008}
+  .cm-action{display:flex;align-items:center;gap:12px;width:100%;border:0;background:transparent;color:inherit;cursor:pointer}
+  .cm-action:hover:not(.is-disabled),.cm-action:focus-visible{background:#0d99ff;color:#fff}
+  .cm-action.is-disabled{opacity:.4;pointer-events:none}
+  .cm-subwrap{position:relative}
+  .cm-submenu{position:fixed;z-index:10001;width:200px;max-height:calc(100vh - 8px);overflow-y:auto;background:#2c2c2c;border:1px solid #000;border-radius:8px;box-shadow:0 12px 28px #0008}
+  .cm-submenu.hidden{display:none}
+  .cm-shortcut{margin-left:auto;color:#999}
+  .cm-action:hover .cm-shortcut,.cm-action:focus-visible .cm-shortcut{color:#fff}
+  .cm-action:focus-visible{outline:1px solid #0d99ff;outline-offset:-1px}
+  .mf-text-btn{width:100%;height:28px;padding:0 8px;border:0;border-radius:4px;background:#383838;color:#ddd;text-align:left;font-size:11px;cursor:pointer}
+  .mf-text-btn:hover{background:#444}
+  .mf-check{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#b3b3b3;font-size:11px}
+  .mf-advanced{display:grid;gap:8px;padding-top:8px;border-top:1px solid #383838}
+  .mf-advanced summary{color:#b3b3b3;font-size:11px;cursor:pointer}
 </style>
 </head>
 <body class="bg-[#2c2c2c] text-neutral-200 text-xs h-screen flex flex-col overflow-hidden select-none">
 
 <header class="h-11 flex items-center gap-4 px-3 bg-[#1e1e1e] border-b border-black">
   <span class="font-bold text-white">MiniFigma</span>
-  <input id="pname" value="Tanpa judul" maxlength="100" class="num !w-40" title="Nama proyek">
-  <label class="flex items-center gap-1.5"><input id="cg" type="checkbox" checked>Grid (muncul ≥ 800%)</label>
+  <input id="pname" value="Untitled" maxlength="100" class="num !w-40" title="Project name">
+  <label class="flex items-center gap-1.5"><input id="cg" type="checkbox" checked>Grid (shows at ≥ 800%)</label>
   <label class="flex items-center gap-1.5"><input id="mg" type="checkbox" checked>Magnet grid</label>
-  <label class="flex items-center gap-1.5"><input id="mo" type="checkbox" checked>Magnet objek</label>
+  <label class="flex items-center gap-1.5"><input id="mo" type="checkbox" checked>Object magnet</label>
   <div class="ml-auto flex items-center gap-1">
-    <button id="undo" data-i="undo" class="px-2 py-1 rounded hover:bg-neutral-700" title="Urungkan (Ctrl+Z)"></button>
-    <button id="redo" data-i="redo" class="px-2 py-1 rounded hover:bg-neutral-700 mr-2" title="Ulangi (Ctrl+Shift+Z)"></button>
-    <button id="imgopen" class="px-2 py-1.5 rounded hover:bg-neutral-700" title="Library gambar lokal">Gambar</button>
+    <button id="undo" data-i="undo" class="px-2 py-1 rounded hover:bg-neutral-700" title="Undo (Ctrl+Z)"></button>
+    <button id="redo" data-i="redo" class="px-2 py-1 rounded hover:bg-neutral-700 mr-2" title="Redo (Ctrl+Shift+Z)"></button>
+    <button id="imgopen" class="px-2 py-1.5 rounded hover:bg-neutral-700" title="Local image library">Image</button>
     <input id="imgfile" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp" multiple class="hidden">
     <button id="zout" data-i="minus" class="px-2 py-1 rounded hover:bg-neutral-700"></button>
     <button id="zreset" class="w-14 py-1 rounded hover:bg-neutral-700">100%</button>
     <button id="zin" data-i="plus" class="px-2 py-1 rounded hover:bg-neutral-700"></button>
-    <button id="jnew" class="ml-3 px-2 py-1.5 rounded hover:bg-neutral-700">Baru</button>
-    <button id="jopen" class="px-2 py-1.5 rounded hover:bg-neutral-700">Buka JSON</button>
-    <button id="jsave" class="px-2 py-1.5 rounded hover:bg-neutral-700" title="Ctrl+S">Simpan JSON</button>
+    <button id="jnew" class="ml-3 px-2 py-1.5 rounded hover:bg-neutral-700">New</button>
+    <button id="jopen" class="px-2 py-1.5 rounded hover:bg-neutral-700">Open JSON</button>
+    <button id="jsave" class="px-2 py-1.5 rounded hover:bg-neutral-700" title="Ctrl+S">Save JSON</button>
     <input id="jfile" type="file" accept=".json,application/json" class="hidden">
-    <button id="expcopy" class="px-2 py-1.5 rounded hover:bg-neutral-700" title="Salin seleksi sebagai PNG">Salin PNG</button>
-    <button id="exp" class="ml-1 px-3 py-1.5 rounded bg-[#0d99ff] text-white">Ekspor…</button>
+    <button id="expcopy" class="px-2 py-1.5 rounded hover:bg-neutral-700" title="Copy selection as PNG">Copy PNG</button>
+    <button id="exp" class="ml-1 px-3 py-1.5 rounded bg-[#0d99ff] text-white">Export…</button>
   </div>
 </header>
 
@@ -46,11 +132,11 @@
     <div class="px-3 py-2.5 font-semibold border-b border-neutral-700">Layers</div>
     <ul id="layers" class="flex-1 overflow-auto"></ul>
     <div class="px-3 py-2 border-t border-neutral-700 text-neutral-400 leading-relaxed">
-      Seret layer untuk mengubah urutan.
-      Klik dua kali atau F2 untuk ganti nama.
-      Ctrl+] / [ maju/mundur, Ctrl+Shift+] / [ ke paling depan/belakang.
-      Ctrl+G = grup,
-      Ctrl+Shift+G = pisah grup, Ctrl+Z = urungkan.</div>
+      Drag layers to reorder.
+      Double-click or F2 to rename.
+      Ctrl+] / [ move forward/backward, Ctrl+Shift+] / [ to front/back.
+      Ctrl+G = group,
+      Ctrl+Shift+G = ungroup, Ctrl+Z = undo.</div>
   </aside>
 
   <div id="wrap" class="flex-1 relative bg-[#1e1e1e] overflow-hidden">
@@ -58,138 +144,113 @@
     <div id="hint" class="absolute bottom-20 left-1/2 -translate-x-1/2 bg-black/60 rounded px-3 py-1.5 pointer-events-none whitespace-nowrap"></div>
     <textarea id="textedit" rows="1" maxlength="10000" autocomplete="off" spellcheck="false" aria-label="Edit teks di kanvas"></textarea>
     <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-[#2c2c2c] border border-black rounded-xl p-1.5 shadow-xl">
-      <button class="tool" data-t="select" data-i="select" title="Pilih (V)"></button>
+      <button class="tool" data-t="select" data-i="select" title="Select (V)"></button>
       <button class="tool" data-t="frame" data-i="frame" title="Frame (F)"></button>
       <div class="relative flex items-center">
         <button id="shapeBtn" data-i="rect" class="tool" data-t="rect"></button>
         <button id="shapeMore" data-i="chevron" class="!px-1.5"></button>
         <ul id="shapeMenu" style="display:none" class="absolute bottom-11 left-0 bg-[#2c2c2c] border border-black rounded-lg py-1 w-40 z-10">
-          <li data-s="rect">Persegi (R)</li><li data-s="line">Garis (L)</li><li data-s="ellipse">Elips / Oval (O)</li><li data-s="polygon">Poligon (Shift+R)</li><li data-s="star">Bintang (Shift+O)</li>
+          <li data-s="rect">Rectangle (R)</li><li data-s="line">Line (L)</li><li data-s="ellipse">Ellipse / Oval (O)</li><li data-s="polygon">Polygon (Shift+R)</li><li data-s="star">Star (Shift+O)</li>
         </ul>
       </div>
-      <button class="tool" data-t="pen" data-i="pen" title="Pena (P)"></button>
-      <button class="tool" data-t="pencil" data-i="pencil" title="Pensil / gambar bebas (B)"></button>
-      <button class="tool" data-t="text" data-i="text" title="Teks (T)"></button>
-      <button class="tool" data-t="hand" data-i="hand" title="Mode tangan (H)"></button>
+      <button class="tool" data-t="pen" data-i="pen" title="Pen (P)"></button>
+      <button class="tool" data-t="pencil" data-i="pencil" title="Pencil / freehand (B)"></button>
+      <button class="tool" data-t="text" data-i="text" title="Text (T)"></button>
+      <button class="tool" data-t="hand" data-i="hand" title="Hand mode (H)"></button>
     </div>
   </div>
 
-  <aside class="w-60 bg-[#2c2c2c] border-l border-black overflow-auto">
+  <aside class="w-60 bg-[#2c2c2c] border-l border-black props-scroll">
     <div id="props" class="hidden">
-      <div id="ptype" class="px-3 py-2.5 font-semibold border-b border-neutral-700"></div>
-      <div class="p-3 space-y-3 border-b border-neutral-700">
-        <div class="font-semibold">Posisi</div>
-        <div class="text-neutral-400">Sejajarkan</div>
-        <div id="al" class="flex gap-1"></div>
-        <div class="text-neutral-400">Distribusikan jarak (pilih ≥ 3 objek)</div>
-        <div class="flex gap-1"><button id="distx" type="button" class="p-1.5 rounded bg-[#383838] hover:bg-neutral-600" title="Distribusikan horizontal" aria-label="Distribusikan horizontal"></button><button id="disty" type="button" class="p-1.5 rounded bg-[#383838] hover:bg-neutral-600" title="Distribusikan vertikal" aria-label="Distribusikan vertikal"></button></div>
-        <div class="flex gap-1"><button id="flipx" type="button" class="p-1.5 rounded bg-[#383838] hover:bg-neutral-600" title="Balik horizontal" aria-label="Balik horizontal"></button><button id="flipy" type="button" class="p-1.5 rounded bg-[#383838] hover:bg-neutral-600" title="Balik vertikal" aria-label="Balik vertikal"></button></div>
-        <div class="grid grid-cols-2 gap-2">
-          <label>X<input id="px" type="number" class="num"></label>
-          <label>Y<input id="py" type="number" class="num"></label>
-          <label>Rotasi (°)<input id="prot" type="number" class="num"></label>
-          <span></span>
-          <label>Pivot X (%)<input id="ppx" type="number" class="num"></label>
-          <label>Pivot Y (%)<input id="ppy" type="number" class="num"></label>
+      <div id="ptype" class="mf-panel-title"></div>
+      <section class="mf-section" data-section="position">
+        <div class="mf-section-head"><span>Posisi</span><svg class="mf-section-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
+        <div class="mf-section-body">
+          <div><span class="mf-label">Sejajarkan</span><div id="al" class="mf-align"></div></div>
+          <div><span class="mf-label">Distribusikan jarak · pilih ≥ 3 objek</span><div class="mf-actions-row"><button id="distx" type="button" class="mf-icon-btn" title="Distribusikan horizontal" aria-label="Distribusikan horizontal"></button><button id="disty" type="button" class="mf-icon-btn" title="Distribusikan vertikal" aria-label="Distribusikan vertikal"></button><button id="flipx" type="button" class="mf-icon-btn" title="Balik horizontal" aria-label="Balik horizontal"></button><button id="flipy" type="button" class="mf-icon-btn" title="Balik vertikal" aria-label="Balik vertikal"></button></div></div>
+          <div class="mf-grid"><div id="pxslot"></div><div id="pyslot"></div><div id="protslot"></div><span></span></div>
+          <section class="mf-section mf-subsection" data-section="pivot"><div class="mf-section-head"><span>Pivot</span><svg class="mf-section-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2"/></svg></div><div class="mf-section-body mf-grid"><div id="ppxslot"></div><div id="ppyslot"></div></div></section>
         </div>
-      </div>
-      <div class="p-3 space-y-3 border-b border-neutral-700">
-        <div class="grid grid-cols-2 gap-2">
-          <label><span id="pwlabel">Lebar</span><input id="pw" type="number" class="num"></label>
-          <label>Tinggi<input id="ph" type="number" class="num"></label>
-          <label class="col-span-2 flex items-center gap-2"><input id="par" type="checkbox">Kunci rasio</label>
-          <label id="rown">Sisi / titik<input id="pn" type="number" min="3" max="20" class="num"></label>
+      </section>
+      <section class="mf-section" data-section="layout">
+        <div class="mf-section-head"><span>Tata letak</span><svg class="mf-section-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
+        <div class="mf-section-body">
+          <div class="flex items-center justify-between"><span class="mf-label !mb-0">Dimensi</span><button id="parBtn" type="button" class="mf-icon-btn" title="Kunci rasio aspek" aria-label="Kunci rasio aspek"><span id="parIcon"></span></button><input id="par" type="checkbox" class="mf-hidden"></div>
+          <div class="mf-grid"><div id="pwslot"></div><div id="phslot"></div><label id="rown" class="mf-field"><span class="mf-label">Sisi / titik</span><input id="pn" type="number" min="3" max="20" class="num"></label></div>
         </div>
-        <div id="rowtxt" class="space-y-2">
-          <label class="block">Font<select id="pfont" class="num"></select></label>
-          <button id="fontmanage" class="w-full px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600 text-left">Kelola font lokal…</button>
-          <label class="block">Ukuran<input id="pfs" type="number" min="4" max="999" class="num"></label>
-          <label class="block">Bobot font</label>
-          <div class="grid grid-cols-[1fr_auto] items-center gap-2">
-            <input id="pweight" type="number" min="100" max="900" step="100" list="fontWeightOptions" class="num" aria-label="Bobot font (100–900)">
-            <span id="pweightName" class="min-w-20 text-right text-neutral-300">Regular</span>
+      </section>
+      <section id="textsec" class="mf-section mf-hidden" data-section="text">
+        <div class="mf-section-head"><span>Tipografi</span><svg class="mf-section-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
+        <div class="mf-section-body">
+          <div id="tffslot"></div>
+          <div class="mf-grid"><div id="tfwslot"></div><button id="tfi" type="button" class="mf-icon-btn" title="Miring" aria-label="Miring">I</button></div>
+          <div class="mf-grid"><div id="tfsslot"></div><div id="tlhslot"></div></div>
+          <div id="tlsslot"></div>
+          <div><span class="mf-label">Rata horizontal</span><div id="talign" class="mf-segmented"></div></div>
+          <div><span class="mf-label">Rata vertikal</span><div id="tvalign" class="mf-segmented"></div></div>
+          <div class="mf-grid">
+            <div><span class="mf-label">Dekorasi</span><div id="tdecoration" class="mf-segmented"></div></div>
+            <div><span class="mf-label">Huruf</span><div id="tcase" class="mf-segmented"></div></div>
           </div>
-          <datalist id="fontWeightOptions">
-            <option value="100" label="Thin"></option><option value="200" label="Extra Light"></option><option value="300" label="Light"></option>
-            <option value="400" label="Regular"></option><option value="500" label="Medium"></option><option value="600" label="Semi Bold"></option>
-            <option value="700" label="Bold"></option><option value="800" label="Extra Bold"></option><option value="900" label="Black"></option>
-          </datalist>
-          <div class="grid grid-cols-3 gap-1">
-            <button id="pbold" type="button" class="txt-toggle px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600 font-bold" title="Tebal">B</button>
-            <button id="pitalic" type="button" class="txt-toggle px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600 italic" title="Miring">I</button>
-            <button id="punderline" type="button" class="txt-toggle px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600 underline" title="Garis bawah">U</button>
-          </div>
-          <label class="block">Rata<select id="palign" class="num"><option value="left">Kiri</option><option value="center">Tengah</option><option value="right">Kanan</option></select></label>
-          <div class="grid grid-cols-2 gap-2">
-            <label>Jarak baris (%)<input id="plh" type="number" min="50" max="300" class="num"></label>
-            <label>Jarak huruf (px)<input id="pls" type="number" min="-20" max="100" step="0.5" class="num"></label>
-          </div>
-          <label class="flex items-center gap-2"><input id="ptextBox" type="checkbox">Kotak teks (bungkus otomatis)</label>
+          <div><span class="mf-label">Mode kotak teks</span><div id="tmode" class="mf-segmented"></div></div>
         </div>
-      </div>
-      <div class="p-3 border-b border-neutral-700">
-        <div class="flex items-center justify-between font-semibold mb-2"><span>Tampilan</span><button id="peye" data-i="eye" class="px-1.5 rounded hover:bg-neutral-600" title="Tampil / sembunyi"></button></div>
-        <div class="grid grid-cols-2 gap-2">
-          <label>Opasitas (%)<input id="pop" type="number" min="0" max="100" class="num"></label>
-          <label id="rowr">Radius sudut<input id="pr" type="number" min="0" class="num"></label>
-          <div id="rowradii" class="col-span-2 grid grid-cols-4 gap-1" title="Radius sudut: kiri atas, kanan atas, kanan bawah, kiri bawah">
-            <input id="pr0" type="number" min="0" class="num" aria-label="Radius kiri atas">
-            <input id="pr1" type="number" min="0" class="num" aria-label="Radius kanan atas">
-            <input id="pr2" type="number" min="0" class="num" aria-label="Radius kanan bawah">
-            <input id="pr3" type="number" min="0" class="num" aria-label="Radius kiri bawah">
-          </div>
-          <label class="col-span-2">Blend<select id="pbm" class="num"></select></label>
-        </div>
-      </div>
-      <div class="p-3 border-b border-neutral-700">
-        <div class="flex items-center justify-between font-semibold mb-2"><span>Isi</span><button id="fadd" type="button" class="p-1.5 rounded hover:bg-neutral-600" title="Tambah isi" aria-label="Tambah isi"></button></div>
-        <div id="frow" class="space-y-2"></div>
-        <label class="flex items-center gap-2 mt-2"><input id="pexp" type="checkbox" checked>Tampil di ekspor</label>
-      </div>
-      <div class="p-3 border-b border-neutral-700">
-        <div class="flex items-center justify-between font-semibold mb-2"><span>Garis</span><button id="sadd" type="button" class="p-1.5 rounded hover:bg-neutral-600" title="Tambah garis" aria-label="Tambah garis"></button></div>
-        <div id="srow" class="space-y-2"></div>
-      </div>
-      <div class="p-3 border-b border-neutral-700">
-        <div class="flex items-center justify-between font-semibold mb-2"><span>Palet warna</span><button id="savecolor" type="button" class="p-1.5 rounded hover:bg-neutral-600" title="Simpan warna terpilih" aria-label="Simpan warna terpilih"></button></div>
-        <div id="paletteList" class="flex flex-wrap gap-1.5"></div>
-      </div>
-      <div id="fxsec" class="p-3">
-        <div class="flex items-center justify-between font-semibold mb-2"><span>Efek</span><button id="fxadd" data-i="plus" class="px-1.5 rounded hover:bg-neutral-600" title="Tambah efek"></button></div>
-        <div id="fxlist" class="space-y-2"></div>
-      </div>
+      </section>
+      <section class="mf-section" data-section="appearance">
+        <div class="mf-section-head"><span>Tampilan</span><div class="mf-actions"><button id="peye" type="button" class="mf-icon-btn" title="Sembunyikan objek" aria-label="Sembunyikan objek"></button><button id="blendBtn" type="button" class="mf-icon-btn" title="Mode campuran" aria-label="Mode campuran"><span id="blendIcon"></span></button></div><svg class="mf-section-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
+        <div class="mf-section-body"><div class="mf-grid"><div id="popslot"></div><div id="prslot"></div></div><div id="rowradii" class="mf-grid mf-hidden"><div id="pr0slot"></div><div id="pr1slot"></div><div id="pr2slot"></div><div id="pr3slot"></div></div><div id="pbmslot" class="mf-hidden"></div></div>
+      </section>
+      <section class="mf-section" data-section="fill">
+        <div class="mf-section-head"><span>Isi</span><div class="mf-actions"><button id="fadd" type="button" class="mf-icon-btn" title="Tambah isi" aria-label="Tambah isi"></button></div><svg class="mf-section-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
+        <div id="frow" class="mf-section-body"></div>
+      </section>
+      <section class="mf-section" data-section="stroke">
+        <div class="mf-section-head"><span>Garis</span><div class="mf-actions"><button id="sadd" type="button" class="mf-icon-btn" title="Tambah garis" aria-label="Tambah garis"></button></div><svg class="mf-section-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
+        <div id="srow" class="mf-section-body"></div>
+      </section>
+      <section class="mf-section" data-section="palette">
+        <div class="mf-section-head"><span>Palet warna</span><div class="mf-actions"><button id="savecolor" type="button" class="mf-icon-btn" title="Simpan warna terpilih" aria-label="Simpan warna terpilih"></button></div><svg class="mf-section-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
+        <div id="paletteList" class="mf-section-body flex flex-wrap gap-1.5"></div>
+      </section>
+      <section class="mf-section" data-section="export">
+        <div class="mf-section-head"><span>Ekspor</span><svg class="mf-section-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
+        <div class="mf-section-body"><label class="mf-check"><span>Tampil di ekspor</span><input id="pexp" type="checkbox" checked class="mf-switch"></label></div>
+      </section>
+      <section id="fxsec" class="mf-section" data-section="effects">
+        <div class="mf-section-head"><span>Efek</span><div class="mf-actions"><button id="fxadd" type="button" class="mf-icon-btn" title="Tambah efek" aria-label="Tambah efek"></button></div><svg class="mf-section-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
+        <div id="fxlist" class="mf-section-body"></div>
+      </section>
     </div>
     <section id="framepanel" class="hidden">
       <div class="px-3 py-2.5 font-semibold border-b border-neutral-700">Frame</div>
       <div class="p-3 space-y-3 border-b border-neutral-700">
-        <label class="block">Kategori<select id="frameCategory" class="num mt-1"><option>Telepon</option><option>Tablet</option><option>Desktop</option><option>Presentasi</option><option>Jam tangan</option><option>Kertas</option><option>Media sosial</option><option>Kustom</option></select></label>
+        <label class="block">Category<select id="frameCategory" class="num mt-1"><option>Phone</option><option>Tablet</option><option>Desktop</option><option>Presentation</option><option>Watch</option><option>Paper</option><option>Social</option><option>Custom</option></select></label>
         <label class="block">Preset<select id="framePreset" class="num mt-1"></select></label>
-        <div class="grid grid-cols-2 gap-2"><button id="frameApply" type="button" class="px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Terapkan preset</button><button id="frameRotate" type="button" class="px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Tukar orientasi</button></div>
-        <button id="frameSavePreset" type="button" class="w-full px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Simpan ukuran frame terpilih sebagai preset</button>
-        <div class="grid grid-cols-2 gap-2"><label>Lebar<input id="frameW" type="number" min="1" max="10000" class="num"></label><label>Tinggi<input id="frameH" type="number" min="1" max="10000" class="num"></label></div>
+        <div class="grid grid-cols-2 gap-2"><button id="frameApply" type="button" class="px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Apply preset</button><button id="frameRotate" type="button" class="px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Swap orientation</button></div>
+        <button id="frameSavePreset" type="button" class="w-full px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Save current frame size as preset</button>
+        <div class="grid grid-cols-2 gap-2"><label>Width<input id="frameW" type="number" min="1" max="10000" class="num"></label><label>Height<input id="frameH" type="number" min="1" max="10000" class="num"></label></div>
       </div>
       <div class="p-3 space-y-2 border-b border-neutral-700">
-        <div class="font-semibold">Struktur</div>
-        <label id="frameClipRow" class="flex items-center gap-2"><input id="frameClip" type="checkbox" checked class="accent-[#0d99ff]">Clip konten</label>
-        <button id="frameWrap" type="button" class="w-full px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Bungkus seleksi dengan frame</button>
-        <button id="frameRelease" type="button" class="w-full px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Lepas frame, pertahankan isi</button>
-        <button id="frameToGroup" type="button" class="w-full px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Ubah frame menjadi grup</button>
-        <button id="groupToFrame" type="button" class="w-full px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Ubah grup/seleksi menjadi frame</button>
+        <div class="font-semibold">Structure</div>
+        <label id="frameClipRow" class="flex items-center gap-2"><input id="frameClip" type="checkbox" checked class="accent-[#0d99ff]">Clip content</label>
+        <button id="frameWrap" type="button" class="w-full px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Wrap selection in frame</button>
+        <button id="frameRelease" type="button" class="w-full px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Release frame, keep contents</button>
+        <button id="frameToGroup" type="button" class="w-full px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Convert frame to group</button>
+        <button id="groupToFrame" type="button" class="w-full px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Convert group/selection to frame</button>
       </div>
       <div id="frameSmoothRow" class="p-3 border-b border-neutral-700">
         <label class="block">Corner smoothing <span id="frameSmoothValue">0%</span><input id="frameSmooth" type="range" min="0" max="100" value="0" class="w-full accent-[#0d99ff]"></label>
       </div>
     </section>
-    <p id="empty" class="p-3 text-neutral-400">Pilih objek, atau gambar dengan alat di bawah kanvas.</p>
+    <p id="empty" class="p-3 text-neutral-400">Select an object, or draw with the tool below the canvas.</p>
   </aside>
 </main>
 
 <dialog id="imgdlg" class="bg-[#2c2c2c] text-neutral-200 border border-neutral-600 rounded-lg p-0 w-[min(560px,90vw)]">
   <div class="p-3 border-b border-neutral-700 flex items-center gap-2">
-    <strong class="flex-1">Library gambar lokal</strong>
+    <strong class="flex-1">Local image library</strong>
     <span id="imgcount" class="text-neutral-400"></span>
-    <button id="imgupload" class="px-2 py-1 rounded bg-[#0d99ff] text-white">Unggah</button>
-    <button id="imgclose" class="px-2 py-1 rounded hover:bg-neutral-700">Tutup</button>
+    <button id="imgupload" class="px-2 py-1 rounded bg-[#0d99ff] text-white">Upload</button>
+    <button id="imgclose" class="px-2 py-1 rounded hover:bg-neutral-700">Close</button>
   </div>
   <div id="imglib" class="p-3 grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[60vh] overflow-auto"></div>
 </dialog>
@@ -219,8 +280,8 @@
     <div class="flex items-center"><strong class="flex-1 text-base">Ekspor</strong><button id="exportclose" type="button" class="px-2 py-1 rounded hover:bg-neutral-700" aria-label="Tutup">Tutup</button></div>
     <label class="block">Area
       <select id="exportScope" class="num mt-1">
-        <option value="all">Semua objek terlihat</option>
-        <option value="selection">Seleksi</option>
+        <option value="all">All visible objects</option>
+        <option value="selection">Selection</option>
         <option value="frame">Frame</option>
       </select>
     </label>
@@ -230,22 +291,22 @@
     <div class="grid grid-cols-2 gap-2">
       <label>Format
         <select id="exportFormat" class="num mt-1">
-          <option value="png">PNG · transparan</option>
-          <option value="jpg">JPG · latar putih</option>
-          <option value="svg">SVG · PNG tersemat</option>
+          <option value="png">PNG · transparent</option>
+          <option value="jpg">JPG · white background</option>
+          <option value="svg">SVG · embedded PNG</option>
           <option value="pdf">PDF · raster</option>
         </select>
       </label>
-      <label>Skala
+      <label>Scale
         <select id="exportScale" class="num mt-1">
           <option value="1">1×</option><option value="2">2×</option><option value="3">3×</option><option value="4">4×</option>
         </select>
       </label>
     </div>
-    <p class="text-neutral-400 leading-relaxed">SVG dan PDF mempertahankan tampilan sebagai gambar raster. JPG dan PDF memakai latar putih.</p>
+    <p class="text-neutral-400 leading-relaxed">SVG and PDF preserve appearance as raster data. JPG and PDF use a white background.</p>
     <div class="flex justify-end gap-2 pt-1">
-      <button id="exportcancel" type="button" class="px-3 py-1.5 rounded hover:bg-neutral-700">Batal</button>
-      <button id="exportconfirm" type="submit" class="px-3 py-1.5 rounded bg-[#0d99ff] text-white">Ekspor</button>
+      <button id="exportcancel" type="button" class="px-3 py-1.5 rounded hover:bg-neutral-700">Cancel</button>
+      <button id="exportconfirm" type="submit" class="px-3 py-1.5 rounded bg-[#0d99ff] text-white">Export</button>
     </div>
   </form>
 </dialog>

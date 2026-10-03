@@ -2,9 +2,10 @@
 const NEWT={frame:'frame',rect:'rect',ellipse:'ellipse',polygon:'polygon',star:'star',line:'path'};
 const SHI={rect:'rect',line:'line',ellipse:'ellipse',polygon:'polygon',star:'star'};
 function setTool(t){
+	if(t!=='select'&&typeof clearHover==='function')clearHover();
 	if(draft&&t!=='pen')draft=null;tool=t;
 	if(SH[t])$('#shapeBtn').data('t',t).html(I(t,18)).attr('title',SH[t]);
-	$('.tool').each(function(){$(this).toggleClass('on',$(this).data('t')===t);});cv.style.cursor=t==='select'?'default':t==='hand'?'grab':'crosshair';$('#hint').text(HINT[t]||'Seret di kanvas untuk menggambar.');
+	$('.tool').each(function(){$(this).toggleClass('on',$(this).data('t')===t);});cv.style.cursor=t==='select'?'default':t==='hand'?'grab':'crosshair';$('#hint').text(t==='select'?(hov?HINT.select:''):HINT[t]||'Seret di kanvas untuk menggambar.');
 	if(typeof syncFramePanel==='function'){syncFramePanel();$('#empty').toggle(!selAll().length&&t!=='frame');}
 }
 MF.init.push(function initTools(){
@@ -39,6 +40,7 @@ MF.init.push(function initTools(){
 	};
 	MF.keys.push((e,k)=>{
 		const mod=e.ctrlKey||e.metaKey;
+		if(!mod&&e.shiftKey&&k==='r'){e.preventDefault();setNavigationView('ruler',!navigationView('ruler'));return true;}
 		if(mod&&e.altKey&&k==='g'){e.preventDefault();if(selAll().length)wrapSelectionInFrame();else note('Pilih objek yang akan dibungkus dengan frame.');return true;}
 		if(e.code==='Space'){space=true;e.preventDefault();return true;}
 		if(k==='a'&&mod){e.preventDefault();setSel([...S]);refresh();return true;}
@@ -56,7 +58,8 @@ MF.init.push(function initTools(){
 		return false;
 	});
 	$(window).on('keydown',e=>{
-		if($(e.target).is('input,textarea,select'))return;const k=e.key.toLowerCase();
+		const k=e.key.toLowerCase(),inPanel=comboActive||$(e.target).is('input,textarea,select')||$(e.target).closest('#props,#mfComboPopup').length;
+		if(inPanel){if((e.ctrlKey||e.metaKey)&&['z','y'].includes(k))for(const fn of MF.keys)if(fn(e,k)===true)return;return;}
 		for(const fn of MF.keys)if(fn(e,k)===true)return;
 	}).on('keyup',e=>{if(e.code==='Space')space=false;});
 	$(window).on('keydown keyup',e=>{if(e.key==='Alt'){if(e.type==='keydown')e.preventDefault();altDown=e.type==='keydown';draw();}});

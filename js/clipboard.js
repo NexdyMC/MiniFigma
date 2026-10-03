@@ -8,7 +8,8 @@ function copySelection(){
 function pasteClip(offset=20){
 	if(!clip||!clip.items.length)return;const gm=new Map();clip.groups.forEach(g=>gm.set(g.id,gn++));
 	clip.groups.forEach(g=>{const id=gm.get(g.id);GR[id]={id,name:g.name,pid:gm.get(g.pid)||0,c:!!g.c};});
-	const copies=clip.items.map(src=>{const s=JSON.parse(JSON.stringify(src));s.id=uid++;s.gid=gm.get(src.gid)||0;move(s,offset,offset);return s;});
+	const ids=new Map(clip.items.map(src=>[src.id,uid++]));
+	const copies=clip.items.map(src=>{const s=JSON.parse(JSON.stringify(src));s.id=ids.get(src.id);s.gid=gm.get(src.gid)||0;s.fid=ids.get(src.fid)||src.fid||0;move(s,offset,offset);return s;});
 	S.push(...copies);normalize();setSel(copies);refresh();save();
 }
 function saveImageLibrary(){try{localStorage.setItem(IMG_KEY,JSON.stringify(imgLib));return true;}catch(e){return false;}}

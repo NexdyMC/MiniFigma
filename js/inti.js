@@ -1,13 +1,22 @@
 /* [6.1] Inti bersama. Isi: state global, utilitas, registri hook, model umum. Bukan di sini: render, interaksi, panel, simpan. */
 const MF={init:[],down:[],move:{},up:{},keys:[],overlay:[],beforeMove:[]};
 const FF='Inter,system-ui,sans-serif';
-let cv=null,ctx=null,S=[],sel=null,multi=[],altDown=false,GR={},gn=1,selG=0,selPt=null,tool='select',V={x:200,y:120,z:1},uid=1,drag=null,draft=null,mouse={x:0,y:0},space=false,dpr=1,G=[],imgLib=[],clip=null,editingText=null;
+let cv=null,ctx=null,S=[],sel=null,multi=[],altDown=false,GR={},gn=1,selG=0,selPt=null,tool='select',V={x:200,y:120,z:1},uid=1,drag=null,draft=null,mouse={x:0,y:0},space=false,dpr=1,G=[],imgLib=[],clip=null,editingText=null,activeFrameId=0;
 const imageCache=new Map();
 const FONT_KEY='minifigma.fonts',MAX_FONT=1024*1024,MAX_FONTS_TOTAL=2*1024*1024,MAX_FONTS=10;
 const FONT_OPTIONS=[['Default (Inter / system)','Inter,system-ui,sans-serif'],['Arial','Arial'],['Helvetica','Helvetica'],['Times New Roman','Times New Roman'],['Georgia','Georgia'],['Courier New','Courier New'],['Monospace','monospace'],['Sans serif','sans-serif'],['Serif','serif'],['Poppins','Poppins'],['Atlas','Atlas']];
 let localFonts=[],fontFaces=new Map();
 const SH={rect:'Persegi',line:'Garis',ellipse:'Elips',polygon:'Poligon',star:'Bintang'};
 const NAME={frame:'Frame',rect:'Persegi',ellipse:'Elips',polygon:'Poligon',star:'Bintang',text:'Teks',path:'Vektor',image:'Gambar'};
+const FRAME_PRESETS=[
+	{category:'Telepon',name:'iPhone 17',w:402,h:874},{category:'Telepon',name:'iPhone 16 Pro',w:402,h:874},{category:'Telepon',name:'iPhone 16',w:393,h:852},{category:'Telepon',name:'Android kecil',w:360,h:800},{category:'Telepon',name:'Android besar',w:412,h:915},
+	{category:'Tablet',name:'iPad mini',w:744,h:1133},{category:'Tablet',name:'iPad',w:820,h:1180},{category:'Tablet',name:'Android tablet',w:800,h:1280},
+	{category:'Desktop',name:'Desktop 1440 × 1024',w:1440,h:1024},{category:'Desktop',name:'Desktop 1366 × 768',w:1366,h:768},{category:'Desktop',name:'Laptop 1280 × 800',w:1280,h:800},{category:'Desktop',name:'Desktop 1920 × 1080',w:1920,h:1080},
+	{category:'Presentasi',name:'Slide 16:9',w:1920,h:1080},{category:'Presentasi',name:'Slide 4:3',w:1440,h:1080},{category:'Presentasi',name:'Slide 16:10',w:1920,h:1200},
+	{category:'Jam tangan',name:'Apple Watch 45 mm',w:396,h:484},{category:'Jam tangan',name:'Apple Watch 41 mm',w:352,h:430},{category:'Jam tangan',name:'Wear OS',w:384,h:384},
+	{category:'Kertas',name:'A4',w:595,h:842},{category:'Kertas',name:'A3',w:842,h:1191},{category:'Kertas',name:'Letter',w:612,h:792},{category:'Kertas',name:'Legal',w:612,h:1008},
+	{category:'Media sosial',name:'Instagram Post',w:1080,h:1080},{category:'Media sosial',name:'Instagram Portrait',w:1080,h:1350},{category:'Media sosial',name:'Instagram Story',w:1080,h:1920},{category:'Media sosial',name:'Facebook Cover',w:1640,h:924},{category:'Media sosial',name:'YouTube Thumbnail',w:1280,h:720},{category:'Media sosial',name:'LinkedIn Cover',w:1584,h:396}
+];
 const HINT={select:'Klik untuk memilih, seret di area kosong untuk memilih banyak objek (Shift = tambah/kurangi). Spasi + seret = geser, Ctrl + scroll = zoom. Klik dua kali teks untuk mengedit. Dekati sudut dari luar untuk memutar (Shift = 15°, Alt = pivot).',pen:'Klik = titik sudut, klik + seret = titik melengkung. Klik titik pertama untuk menutup. Enter / Esc selesai.',pencil:'Seret di kanvas untuk menggambar bebas.',text:'Klik di kanvas lalu ketik. Enter membuat baris baru, Ctrl+Enter simpan, Esc batalkan.'};
 const s2w=(x,y)=>[(x-V.x)/V.z,(y-V.y)/V.z],w2s=(x,y)=>[x*V.z+V.x,y*V.z+V.y];
 const chk=id=>$(id).is(':checked');
@@ -38,7 +47,16 @@ function rootOf(s){let c=s.gid||0;while(c&&gpid(c))c=gpid(c);return c;}
 function inferG(a){let g=a[0].gid||0,best=0;while(g){const L=leavesOf(g);if(L.length===a.length&&L.every(x=>a.includes(x)))best=g;g=gpid(g);}return best;}
 function setSel(a){multi=a.length>1?a:[];sel=a.length===1?a[0]:null;selG=a.length>1?inferG(a):0;selPt=null;}
 function arrange(L,g){const out=[],seen=new Set();L.forEach(s=>{const c=childOf(s,g);if(c==null)out.push(s);else if(!seen.has(c)){seen.add(c);out.push(...arrange(L.filter(x=>childOf(x,g)===c),c));}});return out;}
-function normalize(){Object.keys(GR).forEach(k=>{if(!S.some(s=>inGroup(s,+k)))delete GR[k];});S=arrange(S,0);}
+function arrangeFrames(fid=0,seen=new Set()){
+	if(seen.has(fid))return [];
+	const next=new Set(seen);
+	next.add(fid);
+	const parent=fid?S.find(f=>f.id===fid&&f.type==='frame'):null;
+	const scope=arrange(S.filter(s=>frameParentOf(s)===parent),0),out=[];
+	scope.forEach(s=>{out.push(s);if(s.type==='frame')out.push(...arrangeFrames(s.id,next));});
+	return out;
+}
+function normalize(){Object.keys(GR).forEach(k=>{if(!S.some(s=>inGroup(s,+k)))delete GR[k];});S=arrangeFrames(0);}
 
 function bbox(s){
 	if(s.type!=='path')return {x:s.x,y:s.y,w:s.w,h:s.h};
@@ -46,6 +64,19 @@ function bbox(s){
 	return {x,y,w:Math.max(...xs)-x,h:Math.max(...ys)-y};
 }
 const hasH=h=>h&&(h.x||h.y);
+function frameParentOf(s){
+	if(Object.prototype.hasOwnProperty.call(s,'fid'))return +s.fid?S.find(x=>x.id===+s.fid&&x.type==='frame'&&x!==s)||null:null;
+	return typeof nearestFrameParent==='function'?nearestFrameParent(s):null;
+}
+function setFrameParent(s,parent){
+	if(!s||s.type==='frame'&&s===parent)return;
+	if(!parent){s.fid=0;return;}
+	let p=parent;while(p){if(p===s)return;p=frameParentOf(p);}
+	s.fid=parent.id;
+}
+function frameDepth(s){
+	let depth=0,p=frameParentOf(s),seen=new Set();while(p&&!seen.has(p.id)){seen.add(p.id);depth++;p=frameParentOf(p);}return depth;
+}
 function seg(g,a,b){if(hasH(a.ho)||hasH(b.hi))g.bezierCurveTo(a.x+(a.ho?a.ho.x:0),a.y+(a.ho?a.ho.y:0),b.x+(b.hi?b.hi.x:0),b.y+(b.hi?b.hi.y:0),b.x,b.y);else g.lineTo(b.x,b.y);}
 function flat(s){
 	const P=s.pts,out=[];if(!P.length)return out;out.push({x:P[0].x,y:P[0].y});
@@ -60,7 +91,7 @@ function flat(s){
 	return out;
 }
 function mk(type,x,y){
-	const id=uid++,s={id,type,x,y,w:0,h:0,r:0,rot:0,n:type==='star'?5:3,pts:[],closed:false,text:'Teks',fs:16,fontFamily:FF,fontWeight:400,bold:false,italic:false,underline:false,textAlign:'left',lineHeight:125,letterSpacing:0,textBox:false,fillOn:true,fill:'#d9d9d9',stroke:'#d9d9d9',sw:0,name:NAME[type]+' '+id};
+	const id=uid++,s={id,type,x,y,w:0,h:0,r:0,smooth:0,fid:0,rot:0,n:type==='star'?5:3,pts:[],closed:false,text:'Teks',fs:16,fontFamily:FF,fontWeight:400,bold:false,italic:false,underline:false,textAlign:'left',lineHeight:125,letterSpacing:0,textBox:false,fillOn:true,fill:'#d9d9d9',stroke:'#d9d9d9',sw:0,name:NAME[type]+' '+id};
 	if(type==='frame')s.fill='#ffffff';if(type==='path'){s.fillOn=false;s.sw=2;}return s;
 }
 function getPaintLayers(s,kind){
@@ -86,7 +117,7 @@ const rp=(s,x,y,a=1)=>{
 	const qx=dx*c-dy*n,qy=dx*n+dy*c;return a===1?[cx+qx,cy+qy]:[cx+(s.flipX?-qx:qx),cy+(s.flipY?-qy:qy)];
 };
 const inside=(s,f)=>{const b=bbox(s),a=bbox(f),cx=b.x+b.w/2,cy=b.y+b.h/2;return cx>=a.x&&cx<=a.x+a.w&&cy>=a.y&&cy<=a.y+a.h;};
-const kidsOf=f=>S.filter(s=>s!==f&&S.indexOf(s)>S.indexOf(f)&&inside(s,f));
+const kidsOf=f=>S.filter(s=>{if(s===f)return false;let p=frameParentOf(s),seen=new Set();while(p&&!seen.has(p.id)){if(p===f)return true;seen.add(p.id);p=frameParentOf(p);}return false;});
 function move(s,dx,dy){if(s.type==='path')s.pts.forEach(p=>{p.x+=dx;p.y+=dy;});else{s.x+=dx;s.y+=dy;}}
 function resizeLayer(s,src,dst,srcBox=bbox(src)){
 	const sx=dst.w/(srcBox.w||1),sy=dst.h/(srcBox.h||1);
@@ -101,5 +132,5 @@ function ubox(a){const B=a.map(bbox),x0=Math.min(...B.map(b=>b.x)),y0=Math.min(.
 function kidsFor(it){const k=[];it.forEach(f=>{if(f.type==='frame')kidsOf(f).forEach(c=>{if(!it.includes(c)&&!k.includes(c))k.push(c);});});return k;}
 function boxHit(s,Rc){const b=bbox(s),c=[[b.x,b.y],[b.x+b.w,b.y],[b.x+b.w,b.y+b.h],[b.x,b.y+b.h]].map(p=>rp(s,p[0],p[1])),xs=c.map(p=>p[0]),ys=c.map(p=>p[1]),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);if(s.type==='frame')return x0>=Rc.x&&x1<=Rc.x+Rc.w&&y0>=Rc.y&&y1<=Rc.y+Rc.h;return x1>=Rc.x&&x0<=Rc.x+Rc.w&&y1>=Rc.y&&y0<=Rc.y+Rc.h;}
 function cl(v,a,b,d){v=parseFloat(v);return isNaN(v)?d:Math.min(b,Math.max(a,v));}
-function refresh(){const n=selAll().length;$('#props').toggleClass('hidden',!n);$('#empty').toggle(!n);syncProps();renderFx();renderLayers();draw();}
+function refresh(){const n=selAll().length;$('#props').toggleClass('hidden',!n);if(typeof syncFramePanel==='function')syncFramePanel();$('#empty').toggle(!n&&tool!=='frame');syncProps();renderFx();renderLayers();draw();}
 function note(m){$('#hint').text(m);}

@@ -143,6 +143,26 @@
         <div id="fxlist" class="space-y-2"></div>
       </div>
     </div>
+    <section id="framepanel" class="hidden">
+      <div class="px-3 py-2.5 font-semibold border-b border-neutral-700">Frame</div>
+      <div class="p-3 space-y-3 border-b border-neutral-700">
+        <label class="block">Kategori<select id="frameCategory" class="num mt-1"><option>Telepon</option><option>Tablet</option><option>Desktop</option><option>Presentasi</option><option>Jam tangan</option><option>Kertas</option><option>Media sosial</option><option>Kustom</option></select></label>
+        <label class="block">Preset<select id="framePreset" class="num mt-1"></select></label>
+        <div class="grid grid-cols-2 gap-2"><button id="frameApply" type="button" class="px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Terapkan preset</button><button id="frameRotate" type="button" class="px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Tukar orientasi</button></div>
+        <button id="frameSavePreset" type="button" class="w-full px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Simpan ukuran frame terpilih sebagai preset</button>
+        <div class="grid grid-cols-2 gap-2"><label>Lebar<input id="frameW" type="number" min="1" max="10000" class="num"></label><label>Tinggi<input id="frameH" type="number" min="1" max="10000" class="num"></label></div>
+      </div>
+      <div class="p-3 space-y-2 border-b border-neutral-700">
+        <div class="font-semibold">Struktur</div>
+        <button id="frameWrap" type="button" class="w-full px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Bungkus seleksi dengan frame</button>
+        <button id="frameRelease" type="button" class="w-full px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Lepas frame, pertahankan isi</button>
+        <button id="frameToGroup" type="button" class="w-full px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Ubah frame menjadi grup</button>
+        <button id="groupToFrame" type="button" class="w-full px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Ubah grup/seleksi menjadi frame</button>
+      </div>
+      <div id="frameSmoothRow" class="p-3 border-b border-neutral-700">
+        <label class="block">Corner smoothing <span id="frameSmoothValue">0%</span><input id="frameSmooth" type="range" min="0" max="100" value="0" class="w-full accent-[#0d99ff]"></label>
+      </div>
+    </section>
     <p id="empty" class="p-3 text-neutral-400">Pilih objek, atau gambar dengan alat di bawah kanvas.</p>
   </aside>
 </main>
@@ -172,6 +192,8 @@
 <script src="lib/jquery.min.js"></script>
 <script src="lib/tailwind.js"></script>
 <script src="js/inti.js"></script>
+<script src="js/frame.js"></script>
+<script src="js/hierarki.js"></script>
 <script src="js/kanvas.js"></script>
 <script src="js/efek.js"></script>
 <script src="js/teks.js"></script>

@@ -1,7 +1,8 @@
 # MiniFigma — Dokumentasi Proyek
 
 > Dokumen ini ditulis agar AI (atau developer) lain bisa langsung melanjutkan proyek tanpa bertanya dari nol.
-> Kirim bersama file `index.html` (kode proyek). Baca bagian 0 dulu.
+> Dokumen ini berada di `docs/DOKUMENTASI.md` dalam repo. Untuk GitHub Copilot: buka workspace proyek, lampirkan
+> dokumen ini (`#file:docs/DOKUMENTASI.md`), lalu baca Bagian 0 dan Bagian 12. Untuk AI lain: kirim bersama kode proyek.
 
 ---
 
@@ -12,6 +13,8 @@ Kamu akan melanjutkan proyek "MiniFigma": editor desain vektor mirip Figma
 yang berjalan di browser, memakai <canvas> 2D. Struktur proyek terdiri dari
 index.html, library lokal di lib/, dan JavaScript per kelompok fitur di js/.
 Dokumentasi proyek berada di docs/DOKUMENTASI.md.
+Kamu bekerja sebagai GitHub Copilot di workspace proyek: baca file langsung dari repo,
+jangan meminta saya menempelkan kode yang sudah ada di workspace.
 
 ATURAN WAJIB:
 1. Baca dokumentasi sampai habis sebelum menulis kode.
@@ -21,16 +24,24 @@ ATURAN WAJIB:
   tambahkan ketergantungan CDN atau library berat.
 4. Kode yang memasang event atau menjalankan inisialisasi didaftarkan lewat
   MF.init. Ikuti registri dan urutan script pada Bagian 2.
-5. JANGAN menulis ulang seluruh file. Berikan perubahan sebagai potongan
-   (cari baris X, ganti dengan Y) atau fungsi utuh yang jelas lokasinya.
+5. JANGAN menulis ulang atau memformat ulang seluruh file. Ubah file di workspace
+   dengan perubahan sekecil mungkin (diff kecil) dan sebutkan file serta fungsi yang
+   diubah. Bila tidak bisa mengedit langsung, berikan potongan (cari baris X, ganti
+   dengan Y) atau fungsi utuh yang jelas lokasinya.
 6. Jangan merusak fitur yang sudah ada (lihat Bagian 6, kolom "Sudah").
 7. Pertahankan format JSON proyek dan tambahkan migrasi bila format berubah
    (lihat Bagian 5).
 8. Ikuti gaya kode yang ada (lihat Bagian 8).
 9. Setelah selesai, sebutkan fitur apa yang berubah agar daftar di Bagian 6
    bisa saya perbarui.
+10. Jangan mengedit docs/DOKUMENTASI.md. Daftar fitur di Bagian 6 saya perbarui sendiri.
+    Jangan menghapus, menulis ulang, atau mengurutkan ulang butir di Bagian 6.
+11. Kerjakan satu tugas atau satu fase per sesi. Untuk fitur Frame (6.12 sampai 6.20)
+    ikuti Bagian 12. Jangan melompat ke fase lain.
+12. Setelah mengubah kode, pastikan index.html tetap bisa dibuka lewat klik ganda
+    (file://) tanpa error di Console, lalu tulis cara uji manualnya.
 
-TUGAS SAYA SEKARANG: <tulis tugasnya di sini, mis. "Tambahkan Copy/Paste/Duplikat (Ctrl+C, Ctrl+V, Ctrl+D)">
+TUGAS SAYA SEKARANG: <tulis tugasnya di sini, mis. "Kerjakan Fase 0 Frame (Bagian 12.2)">
 ```
 
 ---
@@ -75,11 +86,53 @@ biasa (tanpa `import`/`export`); handler dan panggilan awal didaftarkan melalui
 | 12 | `js/clipboard.js` | Copy/paste, gambar, library gambar |
 | 13 | `js/simpan.js` | JSON, migrasi, buka/simpan, ekspor PNG |
 | 14 | `js/performa.js` | Riwayat, undo/redo, autosave |
-| 15 | `js/main.js` | Runner `MF.init` dan pemulihan project |
+| 15 | `js/frame.js` | [6.12] Preset ukuran, orientasi, bungkus/lepas frame, grup ↔ frame, corner smoothing |
+| 16 | `js/hierarki.js` | [6.13] Induk–anak nyata (`fid`), label judul frame, navigasi Enter / Shift+Enter / Tab |
+| 17 | `js/constraint.js` | [6.14] Constraints, resize responsif, clip konten frame, resize to fit |
+| 18 | `js/autolayout.js` | [6.15] Auto layout |
+| 19 | `js/layoutgrid.js` | [6.16] Layout grid per frame |
+| 20 | `js/prototipe.js` | [6.17] Prototipe (alur antar frame) |
+| 21 | `js/komponen.js` | [6.18] Komponen dan varian |
+| 22 | `js/variabel.js` | [6.19] Style dan variabel |
+| 23 | `js/organisasi.js` | [6.20] Section, tidy up, ekspor batch, inspeksi, salin properti |
+| 24 | `js/main.js` | Runner `MF.init` dan pemulihan project |
+
+File urutan 15 sampai 23 adalah **rencana**: dibuat pada Fase 0 (Bagian 12.2) sebagai kerangka kosong, lalu
+diisi per fase. Setelah dibuat, tag `<script>`-nya harus ada di `index.html` persis sesuai urutan di atas
+(semuanya sebelum `js/main.js`). Jika ada `js/script.js` di folder, itu bukan bagian struktur ini: jangan
+dimuat atau diubah tanpa konfirmasi, dan jangan menyalin deklarasinya ke file lain.
 
 Urutan tag `<script>` di `index.html` harus sama dengan tabel di atas.
 Baris pertama setiap file fitur berisi komentar kepemilikan: `[6.x] Nama kelompok.
 Isi: ... Bukan di sini: ...`.
+
+### Peta kelompok fitur → file
+
+| Bagian 6 | Kelompok | File utama |
+|---|---|---|
+| 6.1 | Kanvas dan navigasi | `kanvas.js` |
+| 6.2 | Alat gambar | `alat.js` |
+| 6.3 | Pena vektor | `pena.js` |
+| 6.4 | Seleksi dan transformasi | `transformasi.js` |
+| 6.5 | Layer dan grup | `layer.js` (data grup di `inti.js`) |
+| 6.6 | Panel properti | `panel.js` |
+| 6.7 | Efek | `efek.js` |
+| 6.8 | Teks | `teks.js` |
+| 6.9 | Riwayat, simpan, ekspor | `simpan.js` (JSON, buka/simpan, ekspor PNG); undo/redo dan autosave ada di `performa.js` |
+| 6.10 | Clipboard dan pintasan | `clipboard.js` |
+| 6.11 | Offline dan performa | `performa.js` |
+| 6.12 | Pembuatan dan jenis frame | `frame.js` |
+| 6.13 | Hierarki, seleksi, dan label frame | `hierarki.js` |
+| 6.14 | Constraints dan resize responsif | `constraint.js` |
+| 6.15 | Auto layout | `autolayout.js` |
+| 6.16 | Layout grid | `layoutgrid.js` |
+| 6.17 | Prototipe | `prototipe.js` |
+| 6.18 | Komponen dan varian | `komponen.js` |
+| 6.19 | Style dan variabel | `variabel.js` |
+| 6.20 | Organisasi dan serah-terima | `organisasi.js` |
+
+Aturan: fitur baru ditaruh di file kelompoknya. Perubahan kecil pada file lain (mis. `inti.js`, `layer.js`,
+`kanvas.js`, `simpan.js`) boleh bila memang diperlukan, dan harus disebutkan di laporan.
 
 ### Registri `MF`
 
@@ -91,6 +144,9 @@ Isi: ... Bukan di sini: ...`.
 - `MF.beforeMove`: hook sebelum memulai geser, dipakai duplikasi Alt-seret.
 - Prioritas mouse: 10 pan, 20 pena, 30 teks, 40 bentuk, 50 pivot, 60 radius,
   70 titik/handle pena, 75 resize, 80 rotasi, 90 seleksi/marquee/geser.
+- Fitur Frame yang butuh hook mouse baru memakai prioritas di antara 80 dan 90 dan mencatatnya di sini.
+- Panel kanan: tiap file fitur Frame mengisi wadahnya sendiri (`slot-frame`, `slot-constraint`, `slot-autolayout`,
+  `slot-layoutgrid`, `slot-prototipe`, `slot-komponen`, `slot-variabel`) lewat `MF.init`, bukan lewat `panel.js`.
 
 ---
 
@@ -149,6 +205,8 @@ Setiap objek di `S` dibuat oleh `mk(type,x,y)`:
 
 Garis (line tool) disimpan sebagai `path` dengan 2 titik tanpa handle.
 
+Properti tambahan untuk Frame (`fid`, constraints, auto layout, layout grid, dst.) baru dirancang di Bagian 12.2 dan belum ada di kode.
+
 ---
 
 ## 5. Format file JSON (versi 8)
@@ -196,6 +254,7 @@ Garis (line tool) disimpan sebagai `path` dengan 2 titik tanpa handle.
 - Autosave: kunci localStorage `minifigma.project`.
 - Palet warna tersimpan: localStorage `minifigma.palette` (maksimal 24 warna).
 - Font TTF kustom disimpan terpisah di localStorage `minifigma.fonts`; file font tidak disertakan dalam ekspor JSON.
+- Rencana format v9 untuk Frame (induk–anak nyata, constraints, auto layout) ada di Bagian 12.2. Versi saat ini tetap v8.
 
 ---
 
@@ -342,7 +401,7 @@ Legenda: `[x]` sudah lengkap · `[~]` ada tapi terbatas · `[ ]` belum ada
 - [ ] Bungkus seleksi dengan frame (Ctrl+Alt+G)
 - [ ] Lepas frame tanpa menghapus isinya
 - [ ] Ubah grup menjadi frame, dan frame menjadi grup
-- [~] Frame di dalam frame (bersarang): saat ini hanya lewat aturan titik tengah, belum induk-anak nyata
+- [ ] Frame di dalam frame (bersarang): saat ini hanya lewat aturan titik tengah, belum induk-anak nyata
 - [ ] Corner smoothing (sudut ala iOS) untuk frame dan persegi
 
 ### 6.13 Hierarki, seleksi, dan label frame
@@ -507,6 +566,10 @@ Style warna sudah ada di 6.6 (palet / style tersimpan), tidak diulang.
 - Ikon baru ditambahkan ke objek `P` di `js/inti.js` dalam gaya garis 24×24
   (`currentColor`). Teks UI dan komentar berbahasa Indonesia.
 - Hindari `requestAnimationFrame` terus-menerus; gambar ulang hanya saat perlu.
+- Fitur Frame (6.12 sampai 6.20): satu file per kelompok sesuai Bagian 2; UI panel kanan fitur itu diisi ke wadah
+  `slot-*` miliknya oleh file fiturnya sendiri.
+- Perubahan pada daftar fitur (Bagian 6) hanya berupa tanda status `[ ]` / `[~]` / `[x]`, dilakukan oleh pemilik proyek.
+- Aturan ringkas untuk GitHub Copilot ada di `.github/copilot-instructions.md`; bila aturan di sini berubah, perbarui juga file itu.
 
 ---
 
@@ -520,6 +583,8 @@ Style warna sudah ada di 6.6 (palet / style tersimpan), tidak diulang.
 6. **Background blur** menyalin seluruh kanvas per objek: berat jika dipakai banyak.
 7. **Font TTF kustom** tersimpan pada browser/perangkat ini dan tidak ikut dalam file JSON proyek.
 8. **Kunci localStorage** hanya satu proyek (`minifigma.project`); belum ada daftar banyak proyek.
+9. **Kerangka file Frame belum ada**: `frame.js` sampai `organisasi.js` baru rencana; dibuat pada Fase 0 (Bagian 12.2).
+10. **`js/script.js`** (bila masih ada di folder) tidak termasuk struktur di Bagian 2; periksa isinya dan pindahkan atau hapus agar tidak ada deklarasi ganda.
 
 ---
 
@@ -537,6 +602,14 @@ Style warna sudah ada di 6.6 (palet / style tersimpan), tidak diulang.
 | 8 | Impor gambar + pipet warna | Pelengkap | Sedang |
 | 9 | Optimasi performa: culling, undo hemat memori, IndexedDB | Untuk laptop spek rendah | Sedang |
 | 10 | Clip frame, auto layout, komponen, boolean | Fitur besar, terakhir | Sulit |
+| 11 | Frame Fase 0: kerangka 9 file baru dan wadah panel (Bagian 12.2) | Landasan untuk fase Frame | Mudah |
+| 12 | Frame Fase 1: induk–anak nyata, label, preset (6.12 dan 6.13) | Fondasi semua fitur Frame | Sulit |
+| 13 | Frame Fase 2: constraints dan clip konten (6.14) | Frame menjadi wadah sungguhan | Sedang |
+| 14 | Frame Fase 3: auto layout (6.15) | Fitur Frame paling berpengaruh | Sulit |
+| 15 | Frame Fase 4: layout grid (6.16) | Grid desain per frame | Sedang |
+| 16 | Frame Fase 5 sampai 8: prototipe, komponen, variabel, organisasi (6.17 sampai 6.20) | Rancang dulu, kode kemudian | Sulit |
+
+Baris 11 sampai 16 merinci bagian Frame dari baris 10 dan mengikuti Bagian 12.
 
 ---
 
@@ -544,9 +617,97 @@ Style warna sudah ada di 6.6 (palet / style tersimpan), tidak diulang.
 
 - Berikan **satu tugas per percakapan** dari Bagian 10 agar hemat limit.
 - Minta AI menunjukkan **di mana** potongan kode ditempel (nama fungsi atau komentar penanda).
-- Setelah tugas selesai, **perbarui centang di Bagian 6** dan unggah ulang dokumen ini untuk percakapan berikutnya.
+- Setelah tugas selesai, **perbarui centang di Bagian 6** dan unggah ulang dokumen ini untuk percakapan berikutnya
+  (untuk GitHub Copilot cukup simpan dan commit; dokumen dibaca langsung dari repo).
 - Uji cepat setelah setiap perubahan: gambar bentuk, pilih, grup, undo, simpan JSON, buka JSON.
+- Untuk GitHub Copilot: pakai mode Agent, lampirkan hanya file yang relevan, satu branch atau commit per fase (Bagian 12.1).
 
 ---
 
-*Dokumen diperbarui berdasarkan kode MiniFigma (format JSON v8).*
+## 12. Panduan untuk GitHub Copilot dan pekerjaan Frame
+
+### 12.1 Pengaturan GitHub Copilot
+
+- Simpan dokumen ini di `docs/DOKUMENTASI.md`. Salin file `copilot-instructions.md` (ringkasan aturan Bagian 0) ke
+  `.github/copilot-instructions.md`; Copilot memuatnya otomatis di repo ini bila fitur instruksi repositori aktif.
+- Pakai Copilot Chat mode **Agent** (atau Edit) di VS Code. Lampirkan `#file:docs/DOKUMENTASI.md` dan hanya file
+  `js/` yang relevan dengan tugas (mis. `#file:js/inti.js`). Hindari melampirkan semua file sekaligus agar konteks
+  tidak penuh; pakai `#codebase` untuk mencari fungsi.
+- Satu fase per sesi. Buat branch Git (atau commit) sebelum mulai agar mudah dibatalkan.
+- Setelah Copilot selesai: buka `index.html` dengan klik ganda, periksa Console, jalankan uji manual (Bagian 11),
+  baru commit.
+- Copilot tidak mengedit dokumentasi. Anda memperbarui tanda status di Bagian 6 sendiri berdasarkan laporannya.
+- Bila hasilnya mengubah banyak file atau memformat ulang, minta ulang: "ubah hanya file X, diff seminimal mungkin".
+
+### 12.2 Pengerjaan Frame (6.12 sampai 6.20)
+
+**Aturan khusus Frame**
+- Kerjakan hanya fase yang disebut. Jangan melompat.
+- Bagian 6 tidak diedit oleh Copilot. Laporkan butir mana yang berubah status.
+- Format JSON saat ini v8. Perubahan Frame menaikkan ke v9 dan menambah `MIGRATE[8]`. File v8 harus tetap terbuka
+  dan tampil sama.
+- Performa: tanpa loop animasi terus-menerus; layout dihitung ulang hanya untuk frame yang berubah; tidak ada kerja
+  berat di `mousemove` tanpa perlu.
+
+**Kondisi awal (verifikasi di kode, jangan dianggap pasti)**
+- Semua objek ada di array datar `S` (urutan z). Anak frame ditentukan aturan lama: titik tengah objek berada di dalam
+  kotak frame dan objek berada di atas frame pada urutan `S` (`kidsOf`, `kidsFor`, `inside`).
+- Grup memakai `gid` dan `GR`; anggota grup selalu berurutan di `S` (`arrange`, `normalize`).
+- Frame belum memotong (clip) isinya dan belum punya induk–anak nyata.
+- Koordinat semua objek berupa koordinat dunia.
+
+**Usulan desain (boleh diubah, tapi jelaskan alasannya)**
+- Tambah properti `fid` (id frame induk, 0 = tingkat atas) pada tiap objek, termasuk frame yang bersarang.
+- Jaga invarian: anak sebuah frame berurutan tepat setelah frame itu di `S`, seperti anggota grup. Perluas
+  `arrange()` / `normalize()` agar menjaga urutan ini.
+- Grup dan frame saling bersarang (grup di dalam frame, frame di dalam grup). Pertimbangkan satu pohon induk–anak
+  yang menampung keduanya (mis. `GR[id].fid` untuk grup yang berada di dalam frame). Bila tetap memakai dua relasi
+  (`gid` dan `fid`), tuliskan aturan gabungannya.
+- Koordinat tetap koordinat dunia; panel menampilkan X/Y relatif terhadap induk.
+- JSON v9: layer `frame` punya `children` (seperti `group`). Sifat frame di `setting.frame`
+  `{clip_content, layout:{...}, grids:[...]}`; sifat anak di `setting.constraints` `{horizontal, vertical}`.
+- `MIGRATE[8]`: hitung anak frame dengan aturan lama (titik tengah di dalam frame dan di atas frame pada urutan `S`),
+  lalu isi `fid` / `children`.
+
+**Fungsi yang pasti terdampak (periksa semuanya)**
+`kidsOf`, `kidsFor`, `inside`, `startMove`, `moveWith`, `hit` (bagian anak yang terpotong clip tidak boleh bisa
+diklik), `boxHit` (aturan frame vs anak), tombol Delete dan Cut, `align` (pencarian induk), `renderLayers` (hierarki
+menggantikan indentasi berbasis aturan lama), `exportSel` dan `insertClones` (petakan ulang `fid`), `ser` / `des` /
+`tree` / `fromJSON`, `snapRect` (menempel ke tepi frame), urutan gambar di `draw()` dan ekspor PNG (clip saat
+menggambar anak), serta snapshot undo.
+
+**Fase**
+
+| Fase | Isi | File utama | Uji penerimaan |
+|---|---|---|---|
+| 0 | Kerangka | 9 file baru di Bagian 2 (urutan 15–23) | Aplikasi berjalan persis seperti sebelumnya, Console tanpa error |
+| 1 | 6.12 dan 6.13 | `frame.js`, `hierarki.js` (+ `inti.js`, `layer.js`, `simpan.js`) | Berkas v8 lama tampil sama; seret objek masuk/keluar frame mengganti induk; undo/redo, salin/tempel, simpan/buka JSON tetap benar |
+| 2 | 6.14 dan baris "Clip konten frame" di 6.5 | `constraint.js` (+ `kanvas.js`, `transformasi.js`) | Anak mengikuti constraint saat frame di-resize; Ctrl saat resize tidak mengubah isi; isi yang keluar frame terpotong |
+| 3 | 6.15 | `autolayout.js` | Horizontal/Vertikal + gap + padding + perataan + Hug/Fill/Fixed dulu; lalu Wrap, min/max, posisi absolut, penanda sisip; terakhir mode Grid |
+| 4 | 6.16 | `layoutgrid.js` (+ `kanvas.js`) | Grid kolom/baris tampil di frame, objek menempel ke garis grid, tidak ikut ekspor |
+| 5–8 | 6.17 sampai 6.20 | `prototipe.js`, `komponen.js`, `variabel.js`, `organisasi.js` | Mulai dengan rancangan data JSON dan UI, tunggu persetujuan, baru tulis kode |
+
+**Fase 0 (kerangka)**
+- Buat 9 file di `js/`: `frame.js`, `hierarki.js`, `constraint.js`, `autolayout.js`, `layoutgrid.js`, `prototipe.js`,
+  `komponen.js`, `variabel.js`, `organisasi.js`.
+- Isi tiap file hanya komentar kepemilikan di baris pertama (`/* [6.x] Nama kelompok. Isi: ... Bukan di sini: ... */`)
+  dan satu panggilan `MF.init(function(){});` kosong.
+- Tambahkan tag `<script>` di `index.html` sesuai urutan Bagian 2 (sebelum `js/main.js`).
+- Tambahkan wadah kosong di panel kanan setelah bagian Efek: `slot-frame`, `slot-constraint`, `slot-autolayout`,
+  `slot-layoutgrid`, `slot-prototipe`, `slot-komponen`, `slot-variabel`. Wadah kosong tidak boleh terlihat.
+- Jangan mengubah perilaku apa pun.
+
+### 12.3 Template prompt per fase
+
+```
+Baca docs/DOKUMENTASI.md (Bagian 0, 2, 8, 11, dan 12). Kerjakan Fase <N> dari Bagian 12.2.
+Lampiran: #file:docs/DOKUMENTASI.md dan file js yang terdampak.
+Ikuti aturan Bagian 0 (diff kecil, tanpa CDN, tanpa ES module, MF.init, tidak mengedit dokumentasi).
+Format JSON naik ke v9 hanya bila fase ini mengubah format; sertakan migrasi dan nilai default.
+Di akhir tulis: (a) butir Bagian 6 yang berubah status, (b) fungsi yang diubah atau ditambah,
+(c) cara uji manual, (d) hal yang sengaja belum dikerjakan.
+```
+
+---
+
+*Dokumen diperbarui berdasarkan kode MiniFigma (format JSON v8). Bagian 12 ditambahkan untuk GitHub Copilot dan pengerjaan Frame.*

@@ -1,21 +1,41 @@
-/* [6.9] Simpan dan ekspor. Isi: JSON v8, migrasi, buka/simpan proyek, ekspor PNG. Bukan di sini: riwayat atau autosave. */
-const FMT_VERSION=8,LS_KEY='minifigma.project',IMG_KEY='minifigma.images',MAX_IMAGE=1024*1024,MAX_IMAGE_TOTAL=1400*1024;
+/* [6.9] Simpan dan ekspor. Isi: JSON v9, migrasi, buka/simpan proyek, ekspor PNG. Bukan di sini: riwayat atau autosave. */
+const FMT_VERSION=9,LS_KEY='minifigma.project',IMG_KEY='minifigma.images',MAX_IMAGE=1024*1024,MAX_IMAGE_TOTAL=1400*1024;
 let projName='Tanpa judul';
 const rd=v=>Math.round(v*100)/100;
 const num=(v,d)=>(v===null||v===undefined||v===''||!isFinite(+v))?d:+v;
 const pct=(v,d=100)=>Math.min(100,Math.max(0,num(v,d)));
 const col=(v,d)=>{if(typeof v!=='string')return d;v=v.trim();if(/^#[0-9a-f]{3}$/i.test(v))v='#'+[...v.slice(1)].map(c=>c+c).join('');return /^#[0-9a-f]{6}$/i.test(v)?v.toLowerCase():d;};
 const T_OUT={rect:'rectangle',path:'vector'};
-const MIGRATE={1:d=>d,2:d=>d,3:d=>d,4:d=>d,5:d=>d,6:d=>d,7:d=>d};
+function migrateV8FrameParents(d){
+	const ordered=[];
+	const walk=layers=>(Array.isArray(layers)?layers:[]).forEach(layer=>{
+		if(layer&&(layer.type==='group'||layer.type==='grup'))walk(layer.children);
+		else if(layer)ordered.push(layer);
+	});
+	walk(d.layers);
+	const frames=[];
+	ordered.forEach(layer=>{
+		const st=layer.setting||{},pos=st.position||{},layout=st.layout||{};
+		const x=num(pos.x,0),y=num(pos.y,0),w=Math.max(0,num(layout.width,100)),h=Math.max(0,num(layout.height,100));
+		const cx=x+w/2,cy=y+h/2;
+		const parent=frames.filter(frame=>cx>=frame.x&&cx<=frame.x+frame.w&&cy>=frame.y&&cy<=frame.y+frame.h)
+			.sort((a,b)=>a.w*a.h-b.w*b.h)[0]||null;
+		layer.fid=parent?parent.id:0;
+		if(layer.type==='frame')frames.push({id:layer.id,x,y,w,h});
+	});
+	return d;
+}
+const MIGRATE={1:d=>d,2:d=>d,3:d=>d,4:d=>d,5:d=>d,6:d=>d,7:d=>d,8:migrateV8FrameParents};
 function migrate(d){let v=Math.floor(num(d.version,1));d={...d};while(v<FMT_VERSION){if(MIGRATE[v])d=MIGRATE[v](d);v++;}d.version=FMT_VERSION;return d;}
-function tree(L,g){
+function tree(L,g,fid=0){
 	const out=[],seen=new Set();
-	L.forEach(s=>{
+	const scope=L.filter(s=>(frameParentOf(s)?frameParentOf(s).id:0)===fid);
+	scope.forEach(s=>{
 		const c=childOf(s,g);
 		if(c==null)out.push(ser(s));
 		else if(!seen.has(c)){
-			seen.add(c);const sub=L.filter(x=>childOf(x,g)===c),r=GR[c]||{name:'Grup',c:false};
-			out.push({id:c,type:'group',name:r.name,visible:!sub.every(x=>x.hid),locked:sub.every(x=>x.lock),collapsed:!!r.c,children:tree(sub,c)});
+			seen.add(c);const sub=scope.filter(x=>childOf(x,g)===c),r=GR[c]||{name:'Grup',c:false};
+			out.push({id:c,type:'group',name:r.name,visible:!sub.every(x=>x.hid),locked:sub.every(x=>x.lock),collapsed:!!r.c,children:tree(L,c,fid)});
 		}
 	});
 	return out;
@@ -39,10 +59,11 @@ function desFx(o){
 const T_IN={frame:'frame',rectangle:'rect',rect:'rect',ellipse:'ellipse',oval:'ellipse',polygon:'polygon',star:'star',text:'text',line:'line',vector:'path',path:'path',image:'image'};
 function ser(s){
 	const b=bbox(s),sw=s.sw||0,isLine=s.type==='path'&&s.pts.length===2&&!s.closed&&!s.pts.some(p=>p.ho||p.hi);
+	const parentFrame=frameParentOf(s);
 	const st={
 		position:{x:rd(b.x),y:rd(b.y),rotation:s.rot||0,pivot:{x:s.pvx??.5,y:s.pvy??.5}},
 		layout:{width:rd(b.w),height:rd(b.h),aspect_ratio:!!s.ar},
-		appearance:{opacity:s.op??100,corner_radius:s.r||0,blend_mode:s.bm||'normal',flip_horizontal:!!s.flipX,flip_vertical:!!s.flipY},
+		appearance:{opacity:s.op??100,corner_radius:s.r||0,corner_smoothing:s.smooth||0,blend_mode:s.bm||'normal',flip_horizontal:!!s.flipX,flip_vertical:!!s.flipY},
 		fill:{enabled:!!s.fillOn,color:s.fill,opacity:s.fo??100,visible:s.fv!==false},
 		stroke:{enabled:sw>0,color:s.stroke,opacity:s.so??100,visible:s.sv!==false,position:'center',weight:sw,border_weight:{top:sw,right:sw,bottom:sw,left:sw}},
 		fills:getPaintLayers(s,'fill').map(p=>serPaint(p,'fill')),
@@ -54,13 +75,15 @@ function ser(s){
 	if(s.type==='image')st.image={data_url:s.src,asset_id:s.assetId||null,source_name:s.sourceName||'Gambar'};
 	if(s.type==='rect'||s.type==='frame')st.appearance.corner_radii=(s.radii||[s.r,s.r,s.r,s.r]).map(rd);
 	if(s.type==='path')st.path={closed:!!s.closed,points:s.pts.map(p=>{const o={x:rd(p.x-b.x),y:rd(p.y-b.y)};if(hasH(p.ho))o.handle_out={x:rd(p.ho.x),y:rd(p.ho.y)};if(hasH(p.hi))o.handle_in={x:rd(p.hi.x),y:rd(p.hi.y)};return o;})};
-	return {id:s.id,type:isLine?'line':(T_OUT[s.type]||s.type),name:s.name,visible:!s.hid,locked:!!s.lock,setting:st};
+	const layer={id:s.id,type:isLine?'line':(T_OUT[s.type]||s.type),name:s.name,fid:parentFrame?parentFrame.id:0,visible:!s.hid,locked:!!s.lock,setting:st};
+	if(s.type==='frame'){layer.collapsed=!!s.c;layer.children=tree(S,0,s.id);}
+	return layer;
 }
 function des(l){
 	const type=T_IN[l&&l.type];if(!type)return null;
 	const st=l.setting||{},pos=st.position||{},lay=st.layout||{},ap=st.appearance||{},f=st.fill||{},sk=st.stroke||{};
 	const isPath=type==='line'||type==='path',s=mk(isPath?'path':type,num(pos.x,0),num(pos.y,0));
-	s.w=Math.max(0,num(lay.width,100));s.h=Math.max(0,num(lay.height,100));s.rot=num(pos.rotation,0);s.r=Math.max(0,num(ap.corner_radius,0));s.op=pct(ap.opacity);s.ar=!!lay.aspect_ratio;
+	s.w=Math.max(0,num(lay.width,100));s.h=Math.max(0,num(lay.height,100));s.rot=num(pos.rotation,0);s.r=Math.max(0,num(ap.corner_radius,0));s.smooth=pct(ap.corner_smoothing,0);s.op=pct(ap.opacity);s.ar=!!lay.aspect_ratio;
 	s.flipX=!!ap.flip_horizontal;s.flipY=!!ap.flip_vertical;
 	if(Array.isArray(ap.corner_radii))s.radii=Array.from({length:4},(_,i)=>Math.max(0,num(ap.corner_radii[i],s.r)));
 	const pvo=pos.pivot||{};s.pvx=num(pvo.x,.5);s.pvy=num(pvo.y,.5);s.bm=BM.includes(ap.blend_mode)?ap.blend_mode:'normal';s.fx=(Array.isArray(st.effects)?st.effects:[]).map(desFx).filter(Boolean);
@@ -95,16 +118,32 @@ function fromJSON(d){
 	const from=Math.floor(num(d.version,1));d=migrate(d);const keep=uid,items=[],groups={};let skipped=0,gc=0;
 	const walk=(a,dep,pg,hid,lock)=>a.forEach(l=>{
 		if(l&&(l.type==='group'||l.type==='grup')&&dep<20){const id=++gc;groups[id]={id,name:typeof l.name==='string'&&l.name.trim()?l.name.trim().slice(0,80):'Grup '+id,pid:pg,c:!!l.collapsed};walk(Array.isArray(l.children)?l.children:[],dep+1,id,hid||l.visible===false,lock||!!l.locked);return;}
-		const s=des(l);if(!s){skipped++;return;}s.gid=pg;if(hid)s.hid=true;if(lock)s.lock=true;items.push([s,l.id]);
+		const s=des(l);if(!s){skipped++;return;}s.gid=pg;if(hid)s.hid=true;if(lock)s.lock=true;s.c=!!l.collapsed;items.push([s,l.id,l.fid]);
+		if(s.type==='frame'&&dep<20)walk(Array.isArray(l.children)?l.children:[],dep+1,pg,hid||l.visible===false,lock||!!l.locked);
 	});
 	try{walk(d.layers,0,0,false,false);}catch(e){uid=keep;throw e;}
 	const used=new Set();items.forEach(([s,w])=>{if(Number.isInteger(w)&&w>0&&!used.has(w)){s.id=w;used.add(w);}else s.id=0;});
-	let nx=Math.max(0,...used)+1;items.forEach(([s])=>{if(!s.id)s.id=nx++;});uid=nx;
+	let nx=Math.max(0,...used)+1;items.forEach(([s])=>{if(!s.id)s.id=nx++;});
+	const byId=new Map(items.map(([s])=>[s.id,s]));
+	items.forEach(([s,,parentId])=>{
+		if(!Number.isInteger(parentId)){delete s.fid;return;}
+		const parent=byId.get(parentId);s.fid=parent&&parent.type==='frame'&&parent!==s?parent.id:0;
+	});
+	items.forEach(([s,,parentId])=>{
+		if(!Number.isInteger(parentId)||!s.fid)return;
+		const seen=new Set([s.id]);let parent=s,valid=true;
+		while(parent&&parent.fid){
+			if(seen.has(parent.fid)){valid=false;break;}
+			seen.add(parent.fid);parent=byId.get(parent.fid);
+		}
+		if(!valid)s.fid=0;
+	});
+	uid=nx;
 	return {S:items.map(i=>i[0]),GR:groups,GN:gc+1,skipped,from,name:typeof d.name==='string'&&d.name.trim()?d.name.trim().slice(0,100):'Tanpa judul',view:d.view,settings:d.settings};
 }
-const toJSON=()=>({app:'MiniFigma',version:FMT_VERSION,name:projName,view:{x:rd(V.x),y:rd(V.y),zoom:Math.round(V.z*1000)/1000},settings:{grid:chk('#cg'),snap_grid:chk('#mg'),snap_objects:chk('#mo')},layers:tree(S,0)});
+const toJSON=()=>({app:'MiniFigma',version:FMT_VERSION,name:projName,view:{x:rd(V.x),y:rd(V.y),zoom:Math.round(V.z*1000)/1000},settings:{grid:chk('#cg'),snap_grid:chk('#mg'),snap_objects:chk('#mo')},layers:tree(S,0,0)});
 function applyProject(r){
-	S=r.S;GR=r.GR||{};gn=r.GN||1;projName=r.name;$('#pname').val(projName);
+	S=r.S;GR=r.GR||{};gn=r.GN||1;normalize();projName=r.name;$('#pname').val(projName);
 	const v=r.view;if(v&&isFinite(+v.x)&&isFinite(+v.y)&&+v.zoom>0)V={x:+v.x,y:+v.y,z:Math.min(32,Math.max(.05,+v.zoom))};
 	const g=r.settings;if(g&&typeof g==='object'){if('grid' in g)$('#cg').prop('checked',!!g.grid);if('snap_grid' in g)$('#mg').prop('checked',!!g.snap_grid);if('snap_objects' in g)$('#mo').prop('checked',!!g.snap_objects);}setSel([]);
 }

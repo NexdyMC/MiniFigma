@@ -5,6 +5,7 @@ function setTool(t){
 	if(draft&&t!=='pen')draft=null;tool=t;
 	if(SH[t])$('#shapeBtn').data('t',t).html(I(t,18)).attr('title',SH[t]);
 	$('.tool').each(function(){$(this).toggleClass('on',$(this).data('t')===t);});cv.style.cursor=t==='select'?'default':'crosshair';$('#hint').text(HINT[t]||'Seret di kanvas untuk menggambar.');
+	if(typeof syncFramePanel==='function'){syncFramePanel();$('#empty').toggle(!selAll().length&&t!=='frame');}
 }
 MF.init.push(function initTools(){
 	$('.tool,#shapeMore').addClass('px-3 py-1.5 rounded-lg hover:bg-neutral-700');
@@ -29,12 +30,16 @@ MF.init.push(function initTools(){
 		if(sel&&Math.hypot(c.sx-drag.lastX,c.sy-drag.lastY)>=2)sel.pts.push({x:c.wx,y:c.wy});
 		if(sel&&sel.pts.length<2){S=S.filter(s=>s!==sel);setSel([]);}else setTool('select');
 	};
-	MF.up.new=()=>{
+	MF.up.new=(e,c)=>{
 		if(sel.type==='path'){const a=sel.pts[0],b=sel.pts[1];if(Math.hypot(a.x-b.x,a.y-b.y)<2)b.x+=100;}
-		else if(sel.w<2&&sel.h<2)sel.w=sel.h=100;if(tool!=='select')setTool('select');
+		else if(tool==='frame'&&Math.hypot(c.wx-drag.ox,c.wy-drag.oy)<4){const size=frameToolSize();sel.w=size.w;sel.h=size.h;}
+		else if(sel.w<2&&sel.h<2)sel.w=sel.h=100;
+		setFrameParent(sel,nearestFrameParent(sel));normalize();
+		if(tool!=='select')setTool('select');
 	};
 	MF.keys.push((e,k)=>{
 		const mod=e.ctrlKey||e.metaKey;
+		if(mod&&e.altKey&&k==='g'){e.preventDefault();if(selAll().length)wrapSelectionInFrame();else note('Pilih objek yang akan dibungkus dengan frame.');return true;}
 		if(e.code==='Space'){space=true;e.preventDefault();return true;}
 		if(k==='a'&&mod){e.preventDefault();setSel([...S]);refresh();return true;}
 		if(!mod&&!e.shiftKey){
@@ -43,7 +48,7 @@ MF.init.push(function initTools(){
 		}
 		if(!mod&&e.shiftKey&&(k==='r'||k==='o')){setTool(k==='r'?'polygon':'star');return true;}
 		if(k==='enter'||k==='escape'){if(draft)finishPen();else{setTool('select');setSel([]);refresh();}return true;}
-		if((k==='delete'||k==='backspace')&&selAll().length){const a=selAll();S=S.filter(s=>!a.includes(s));normalize();setSel([]);refresh();save();return true;}
+		if((k==='delete'||k==='backspace')&&selAll().length){const selected=selAll(),a=[...selected,...kidsFor(selected)].filter((s,i,x)=>x.indexOf(s)===i);S=S.filter(s=>!a.includes(s));normalize();setSel([]);refresh();save();return true;}
 		if(selAll().length&&k.startsWith('arrow')){
 			const d=e.shiftKey?10:1,it=selAll(),dx=k==='arrowleft'?-d:k==='arrowright'?d:0,dy=k==='arrowup'?-d:k==='arrowdown'?d:0;
 			[...it,...kidsFor(it)].forEach(s=>move(s,dx,dy));syncProps();draw();save();e.preventDefault();return true;

@@ -119,6 +119,19 @@ MF.init.push(function initPanel(){
 	const alignNames=['Rata kiri','Rata tengah horizontal','Rata kanan','Rata atas','Rata tengah vertikal','Rata bawah'];
 	['l','h','r','t','v','b'].forEach((k,i)=>$('<button type="button" class="p-1.5 rounded bg-[#383838] hover:bg-neutral-600"></button>').attr({title:alignNames[i],'aria-label':alignNames[i]}).html(ic(i>2?1:0,i%3)).data('k',k).on('click',function(){align($(this).data('k'));}).appendTo('#al'));
 	$('#distx').on('click',()=>distribute('x'));$('#disty').on('click',()=>distribute('y'));
+	$('#frameCategory').on('change',renderFramePresets);
+	$('#framePreset').on('change',function(){const p=selectedPreset();if(p){framePresetSize={w:p.w,h:p.h};$('#frameW').val(p.w);$('#frameH').val(p.h);}});
+	$('#frameW,#frameH').on('input',function(){
+		framePresetSize={w:cl($('#frameW').val(),1,10000,framePresetSize.w),h:cl($('#frameH').val(),1,10000,framePresetSize.h)};
+		if(sel&&sel.type==='frame'){sel.w=framePresetSize.w;sel.h=framePresetSize.h;draw();save();}
+	});
+	$('#frameApply').on('click',applyPresetSize);$('#frameRotate').on('click',flipFrameOrientation);$('#frameSavePreset').on('click',saveFramePreset);
+	$('#frameWrap,#groupToFrame').on('click',wrapSelectionInFrame);$('#frameRelease').on('click',releaseSelectedFrame);$('#frameToGroup').on('click',frameToGroup);
+	$('#frameSmooth').on('input',function(){
+		const value=cl(this.value,0,100,0);selAll().forEach(s=>{if(s.type==='frame'||s.type==='rect')s.smooth=value;});
+		$('#frameSmoothValue').text(value+'%');draw();save();
+	});
+	renderFramePresets();syncFramePanel();
 	$('#flipx').on('click',()=>flipSelection('x'));$('#flipy').on('click',()=>flipSelection('y'));
 	$('#px,#py').on('input',()=>{
 		const a=selAll();if(!a.length)return;const b=a.length>1?ubox(a):bbox(a[0]),nx=parseFloat($('#px').val()),ny=parseFloat($('#py').val());if(isNaN(nx)||isNaN(ny))return;

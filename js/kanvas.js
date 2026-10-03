@@ -3,7 +3,10 @@ const gs=()=>{if(V.z>=8)return 1;let s=10;while(s*V.z<10)s*=2;return s;};
 function trace(g,s){
 	if(g.beginPath)g.beginPath();
 	if(s.type==='rect'||s.type==='frame'){
-		const cap=Math.min(s.w/2,s.h/2),r=s.radii||[s.r,s.r,s.r,s.r];g.roundRect(s.x,s.y,s.w,s.h,r.map(v=>Math.max(0,Math.min(v||0,cap))));
+		const cap=Math.min(s.w/2,s.h/2),r=(s.radii||[s.r,s.r,s.r,s.r]).map(v=>Math.max(0,Math.min(v||0,cap))),sm=cl(s.smooth||0,0,100,0);
+		if(!sm){g.roundRect(s.x,s.y,s.w,s.h,r);return;}
+		const [tl,tr,br,bl]=r,pow=2/(2+sm*.06),corner=(cx,cy,rad,a0)=>{for(let i=1;i<=12;i++){const a=a0+i*Math.PI/24,c=Math.cos(a),n=Math.sin(a);g.lineTo(cx+Math.sign(c)*Math.pow(Math.abs(c),pow)*rad,cy+Math.sign(n)*Math.pow(Math.abs(n),pow)*rad);}};
+		g.moveTo(s.x+tl,s.y);g.lineTo(s.x+s.w-tr,s.y);corner(s.x+s.w-tr,s.y+tr,tr,-Math.PI/2);g.lineTo(s.x+s.w,s.y+s.h-br);corner(s.x+s.w-br,s.y+s.h-br,br,0);g.lineTo(s.x+bl,s.y+s.h);corner(s.x+bl,s.y+s.h-bl,bl,Math.PI/2);g.lineTo(s.x,s.y+tl);corner(s.x+tl,s.y+tl,tl,Math.PI);g.closePath();
 	}else if(s.type==='ellipse')g.ellipse(s.x+s.w/2,s.y+s.h/2,Math.abs(s.w/2),Math.abs(s.h/2),0,0,Math.PI*2);
 	else{const P=s.type==='path'?s.pts:geo(s),cl=s.type!=='path'||s.closed;P.forEach((p,i)=>i?seg(g,P[i-1],p):g.moveTo(p.x,p.y));if(cl){if(s.type==='path'&&P.length>2)seg(g,P[P.length-1],P[0]);g.closePath();}}
 }

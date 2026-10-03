@@ -93,10 +93,9 @@ function frameToGroup(){
 	});
 	S=S.filter(s=>s!==frame);normalize();setSel(direct);refresh();save();
 }
-function saveFramePreset(){
+function persistFramePreset(name){
 	if(!sel||sel.type!=='frame'){note('Pilih satu frame untuk menyimpan ukurannya sebagai preset.');return;}
-	const name=prompt('Nama preset frame:',sel.name);
-	if(!name||!name.trim())return;
+	if(!name||!name.trim()){note('Nama preset tidak boleh kosong.');return;}
 	const category=$('#frameCategory').val()||'Kustom';
 	const preset={name:name.trim().slice(0,60),category,w:Math.round(sel.w),h:Math.round(sel.h)};
 	try{
@@ -105,6 +104,11 @@ function saveFramePreset(){
 		localStorage.setItem(CUSTOM_FRAME_KEY,JSON.stringify([...rows,preset]));
 		$('#frameCategory').val(category);renderFramePresets();note('Preset disimpan: '+preset.name);
 	}catch(e){note('Preset frame tidak dapat disimpan: '+e.message);}
+}
+function saveFramePreset(){
+	if(!sel||sel.type!=='frame'){note('Pilih satu frame untuk menyimpan ukurannya sebagai preset.');return;}
+	$('#framePresetName').val(sel.name).trigger('focus').trigger('select');
+	$('#framePresetDlg')[0].showModal();
 }
 function syncFramePanel(){
 	const selected=selAll(),frames=selected.filter(s=>s.type==='frame');
@@ -125,3 +129,14 @@ function syncFramePanel(){
 		$('#frameSmooth').val(0);$('#frameSmoothValue').text('0%');
 	}
 }
+MF.init.push(function initFramePresetDialog(){
+	$('#framePresetConfirm').on('click',()=>{
+		const name=$('#framePresetName').val();
+		$('#framePresetDlg')[0].close();persistFramePreset(name);
+	});
+	$('#framePresetCancel').on('click',()=>$('#framePresetDlg')[0].close());
+	$('#framePresetName').on('keydown',e=>{
+		if(e.key==='Enter'){e.preventDefault();$('#framePresetConfirm').trigger('click');}
+		if(e.key==='Escape')$('#framePresetDlg')[0].close();
+	});
+});

@@ -394,27 +394,27 @@ Legenda: `[x]` sudah lengkap · `[~]` ada tapi terbatas · `[ ]` belum ada
 - [ ] Service Worker / PWA agar bisa dipasang
 
 ### 6.12 Pembuatan dan jenis frame
-- [ ] Preset ukuran di panel saat alat Frame aktif atau frame terpilih, dengan kategori: Telepon, Tablet, Desktop, Presentasi, Jam tangan, Kertas, Media sosial
-- [ ] Daftar preset bawaan (contoh: Desktop 1440×1024, Slide 16:9 1920×1080, A4 595×842, post Instagram)
-- [ ] Preset buatan sendiri (simpan ukuran frame terpilih sebagai preset)
-- [ ] Tukar orientasi potret ↔ lanskap
-- [ ] Bungkus seleksi dengan frame (Ctrl+Alt+G)
-- [ ] Lepas frame tanpa menghapus isinya
-- [ ] Ubah grup menjadi frame, dan frame menjadi grup
-- [ ] Frame di dalam frame (bersarang): saat ini hanya lewat aturan titik tengah, belum induk-anak nyata
-- [ ] Corner smoothing (sudut ala iOS) untuk frame dan persegi
+- [x] Preset ukuran di panel saat alat Frame aktif atau frame terpilih, dengan kategori: Telepon, Tablet, Desktop, Presentasi, Jam tangan, Kertas, Media sosial
+- [x] Daftar preset bawaan (contoh: Desktop 1440×1024, Slide 16:9 1920×1080, A4 595×842, post Instagram)
+- [x] Preset buatan sendiri (simpan ukuran frame terpilih sebagai preset)
+- [x] Tukar orientasi potret ↔ lanskap
+- [x] Bungkus seleksi dengan frame (Ctrl+Alt+G)
+- [x] Lepas frame tanpa menghapus isinya
+- [x] Ubah grup menjadi frame, dan frame menjadi grup
+- [x] Frame di dalam frame (bersarang): saat ini hanya lewat aturan titik tengah, belum induk-anak nyata
+- [x] Corner smoothing (sudut ala iOS) untuk frame dan persegi
 
 ### 6.13 Hierarki, seleksi, dan label frame
-- [ ] Hierarki induk–anak nyata: seret objek ke dalam/luar frame mengganti induknya otomatis (menggantikan aturan titik tengah)
-- [ ] Anak ikut berputar saat frame diputar
-- [ ] X/Y anak ditampilkan relatif terhadap frame induk
-- [ ] Label judul frame di kanvas: klik = pilih, seret = pindahkan, klik dua kali = ganti nama
-- [ ] Klik badan frame yang kosong memulai marquee; klik anak memilih anak
-- [ ] Enter = pilih anak, Shift+Enter = pilih induk, Tab / Shift+Tab = saudara berikutnya / sebelumnya
-- [ ] Panel layer: panah lipat/buka frame, anak bersarang di bawah induknya
-- [ ] Sembunyikan/kunci frame berlaku untuk seluruh isinya
-- [ ] Menghapus frame ikut menghapus isinya
-- [ ] Sorot (hover) frame dan anak saat kursor lewat
+- [x] Hierarki induk–anak nyata: seret objek ke dalam/luar frame mengganti induknya otomatis (menggantikan aturan titik tengah)
+- [x] Anak ikut berputar saat frame diputar
+- [x] X/Y anak ditampilkan relatif terhadap frame induk
+- [x] Label judul frame di kanvas: klik = pilih, seret = pindahkan, klik dua kali = ganti nama
+- [x] Klik badan frame yang kosong memulai marquee; klik anak memilih anak
+- [x] Enter = pilih anak, Shift+Enter = pilih induk, Tab / Shift+Tab = saudara berikutnya / sebelumnya
+- [x] Panel layer: panah lipat/buka frame, anak bersarang di bawah induknya
+- [x] Sembunyikan/kunci frame berlaku untuk seluruh isinya
+- [x] Menghapus frame ikut menghapus isinya
+- [x] Sorot (hover) frame dan anak saat kursor lewat
 
 ### 6.14 Constraints dan resize responsif
 - [ ] Constraint horizontal: Kiri, Kanan, Kiri & Kanan, Tengah, Skala

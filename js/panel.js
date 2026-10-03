@@ -103,9 +103,10 @@ function flipSelection(axis){
 }
 function syncProps(){
 	const a=selAll();if(!a.length)return;const s=a[0],one=a.length===1,B=one?bbox(s):ubox(a),R=v=>Math.round(v*100)/100,t=s.type;
+	const parentFrame=frameParentForSelection(a),position=parentFrame?frameLocalPoint(parentFrame,B.x,B.y):[B.x,B.y];
 	$('#ptype').text(one?s.name.replace(/ \d+$/,''):(selG&&GR[selG]?GR[selG].name:a.length+' objek dipilih'));
 	const fixedText=one&&t==='text'&&s.textBox;
-	$('#px').val(R(B.x));$('#py').val(R(B.y));$('#prot').val(one?s.rot:0).prop('disabled',!one);$('#ppx').val(Math.round((s.pvx??.5)*100)).prop('disabled',!one);$('#ppy').val(Math.round((s.pvy??.5)*100)).prop('disabled',!one);
+	$('#px').val(R(position[0]));$('#py').val(R(position[1]));$('#px,#py').data('framePosition',{x:B.x,y:B.y}).attr('title',parentFrame?'Posisi relatif terhadap '+parentFrame.name:'Posisi di kanvas');$('#prot').val(one?s.rot:0).prop('disabled',!one);$('#ppx').val(Math.round((s.pvx??.5)*100)).prop('disabled',!one);$('#ppy').val(Math.round((s.pvy??.5)*100)).prop('disabled',!one);
 	$('#pbm').val(s.bm||'normal');$('#fxsec').toggle(one);$('#pw').val(R(B.w)).prop('disabled',one&&t==='text'&&!s.textBox).attr({min:fixedText?100:1,max:fixedText?900:null});$('#pwlabel').text(fixedText?'Lebar kotak (100–900 px)':'Lebar');$('#ph').val(R(B.h)).prop('disabled',one&&t==='text');$('#par').prop('checked',!!s.ar).prop('disabled',!one);
 	$('#rown').toggle(one&&(t==='polygon'||t==='star'));$('#pn').val(s.n);$('#rowtxt').toggle(one&&t==='text');$('#pfs').val(s.fs);renderFontOptions(s.type==='text'?s.fontFamily:null);
 	if(one&&t==='text'){$('#pbold').toggleClass('on',(s.fontWeight??(s.bold?700:400))>=600);$('#pitalic').toggleClass('on',!!s.italic);$('#punderline').toggleClass('on',!!s.underline);$('#palign').val(s.textAlign||'left');$('#plh').val(s.lineHeight||125);$('#pls').val(s.letterSpacing||0);$('#ptextBox').prop('checked',!!s.textBox);renderFontWeightOptions(s.fontFamily,s.fontWeight??(s.bold?700:400));}
@@ -134,10 +135,13 @@ MF.init.push(function initPanel(){
 	renderFramePresets();syncFramePanel();
 	$('#flipx').on('click',()=>flipSelection('x'));$('#flipy').on('click',()=>flipSelection('y'));
 	$('#px,#py').on('input',()=>{
-		const a=selAll();if(!a.length)return;const b=a.length>1?ubox(a):bbox(a[0]),nx=parseFloat($('#px').val()),ny=parseFloat($('#py').val());if(isNaN(nx)||isNaN(ny))return;
-		[...a,...kidsFor(a)].forEach(s=>move(s,nx-b.x,ny-b.y));draw();save();
+		const a=selAll();if(!a.length)return;const b=a.length>1?ubox(a):bbox(a),parent=frameParentForSelection(a),nx=parseFloat($('#px').val()),ny=parseFloat($('#py').val());if(isNaN(nx)||isNaN(ny))return;
+		const previous=$('#px').data('framePosition')||{x:b.x,y:b.y};
+		const destination=parent?frameWorldPoint(parent,nx,ny):[nx,ny],dx=destination[0]-previous.x,dy=destination[1]-previous.y;
+		if(!isFinite(dx)||!isFinite(dy)){note('Posisi relatif frame tidak valid.');return;}
+		[...a,...kidsFor(a)].filter((s,i,items)=>items.indexOf(s)===i).forEach(s=>move(s,dx,dy));syncProps();draw();save();
 	});
-	$('#prot').on('input',one(s=>{s.rot=parseFloat($('#prot').val())||0;}));
+	$('#prot').on('input',one(s=>{const rotation=parseFloat($('#prot').val())||0;if(s.type==='frame')setFrameRotation(s,rotation);else s.rot=rotation;}));
 	$('#pw').on('input',()=>{const b=selectionBox();if(!b)return;const w=sel&&sel.type==='text'&&sel.textBox?cl($('#pw').val(),100,900,100):Math.max(1,+$('#pw').val()||1);if(sel&&sel.type==='text'&&sel.textBox){sel.w=w;$('#pw').val(w);fitText(sel);refresh();save();return;}let h=b.h;if(sel&&sel.ar)h=w*(b.h/(b.w||1));$('#ph').val(Math.round(h*100)/100);resizeSelectionTo(w,h);});
 	$('#ph').on('input',()=>{const b=selectionBox();if(!b)return;let h=Math.max(1,+$('#ph').val()||1),w=b.w;if(sel&&sel.ar)w=h*(b.w/(b.h||1));$('#pw').val(Math.round(w*100)/100);resizeSelectionTo(w,h);});
 	$('#par').on('change',one(s=>{s.ar=chk('#par');}));

@@ -189,6 +189,14 @@
 </dialog>
 <input id="fontfile" type="file" accept=".ttf,font/ttf,application/x-font-ttf" class="hidden">
 
+<dialog id="framePresetDlg" class="bg-[#2c2c2c] text-neutral-200 border border-neutral-600 rounded-lg p-0 w-[min(360px,90vw)]">
+  <div class="p-3 border-b border-neutral-700 font-semibold">Simpan preset frame</div>
+  <div class="p-3 space-y-3">
+    <label class="block">Nama preset<input id="framePresetName" maxlength="60" class="num mt-1" autocomplete="off"></label>
+    <div class="flex justify-end gap-2"><button id="framePresetCancel" type="button" class="px-3 py-1.5 rounded hover:bg-neutral-700">Batal</button><button id="framePresetConfirm" type="button" class="px-3 py-1.5 rounded bg-[#0d99ff] text-white">Simpan</button></div>
+  </div>
+</dialog>
+
 <script src="lib/jquery.min.js"></script>
 <script src="lib/tailwind.js"></script>
 <script src="js/inti.js"></script>

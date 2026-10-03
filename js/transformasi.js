@@ -72,7 +72,7 @@ MF.init.push(function initTransform(){
 		};
 		if(e.altKey&&h){if(!cur.includes(h))setSel(unit(h));for(const fn of MF.beforeMove)if(fn(e,c,h)===true){startMove(c.wx,c.wy);refresh();return true;}}
 		if(h&&add){const ul=unit(h);setSel(cur.includes(h)?cur.filter(s=>!ul.includes(s)):[...cur,...ul.filter(s=>!cur.includes(s))]);refresh();return true;}
-		if(h&&(cur.includes(h)||h.type!=='frame')){if(!cur.includes(h))setSel(unit(h));startMove(c.wx,c.wy);refresh();return true;}
+		if(h&&h.type!=='frame'){if(!cur.includes(h))setSel(unit(h));startMove(c.wx,c.wy);refresh();return true;}
 		if(!add)setSel([]);drag={k:'box',x0:c.sx,y0:c.sy,x1:c.sx,y1:c.sy,base:add?cur:[],pend:h};refresh();return true;
 	}});
 	MF.move.resize=(e,c)=>{setResizedSelection(drag,c.wx,c.wy,e.shiftKey||(!drag.multi&&drag.items[0].src.ar));syncProps();};
@@ -88,7 +88,7 @@ MF.init.push(function initTransform(){
 			nh=[...new Set(nh.flatMap(s=>s.gid?leavesOf(rootOf(s)):[s]))].filter(s=>!drag.base.includes(s));setSel([...drag.base,...nh]);
 		}
 	};
-	MF.move.rot=(e,c)=>{const pv=pvt(sel);let r=drag.r0+(Math.atan2(c.wy-pv[1],c.wx-pv[0])-drag.a0)*180/Math.PI;if(e.shiftKey)r=Math.round(r/15)*15;sel.rot=Math.round((((r+180)%360+360)%360-180)*100)/100;syncProps();};
+	MF.move.rot=(e,c)=>{const pv=pvt(sel);let r=drag.r0+(Math.atan2(c.wy-pv[1],c.wx-pv[0])-drag.a0)*180/Math.PI;if(e.shiftKey)r=Math.round(r/15)*15;r=Math.round((((r+180)%360+360)%360-180)*100)/100;if(sel.type==='frame')setFrameRotation(sel,r);else sel.rot=r;syncProps();};
 	MF.move.piv=(e,c)=>{const b=bbox(sel),q=rp(sel,c.wx,c.wy,-1);setPivot(sel,b.w?(q[0]-b.x)/b.w:.5,b.h?(q[1]-b.y)/b.h:.5);syncProps();};
 	MF.move.rad=(e,c)=>{
 		const q=rp(sel,c.wx,c.wy,-1),sg=[[1,1],[-1,1],[-1,-1],[1,-1]][drag.i],cx=[sel.x,sel.x+sel.w,sel.x+sel.w,sel.x][drag.i],cy=[sel.y,sel.y,sel.y+sel.h,sel.y+sel.h][drag.i];

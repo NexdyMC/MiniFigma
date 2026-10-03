@@ -1,5 +1,5 @@
-/* [6.9] Simpan dan ekspor. Isi: JSON v9, migrasi, buka/simpan proyek, ekspor PNG. Bukan di sini: riwayat atau autosave. */
-const FMT_VERSION=9,LS_KEY='minifigma.project',IMG_KEY='minifigma.images',MAX_IMAGE=1024*1024,MAX_IMAGE_TOTAL=1400*1024;
+/* [6.9] Simpan dan ekspor. Isi: JSON v10, migrasi, buka/simpan proyek, ekspor PNG. Bukan di sini: riwayat atau autosave. */
+const FMT_VERSION=10,LS_KEY='minifigma.project',IMG_KEY='minifigma.images',MAX_IMAGE=1024*1024,MAX_IMAGE_TOTAL=1400*1024;
 let projName='Tanpa judul';
 const rd=v=>Math.round(v*100)/100;
 const num=(v,d)=>(v===null||v===undefined||v===''||!isFinite(+v))?d:+v;
@@ -25,7 +25,15 @@ function migrateV8FrameParents(d){
 	});
 	return d;
 }
-const MIGRATE={1:d=>d,2:d=>d,3:d=>d,4:d=>d,5:d=>d,6:d=>d,7:d=>d,8:migrateV8FrameParents};
+function migrateV9FrameClip(d){
+	const walk=layers=>(Array.isArray(layers)?layers:[]).forEach(layer=>{
+		if(!layer)return;
+		if(layer.type==='frame'&&layer.clip_content===undefined)layer.clip_content=true;
+		if(layer.type==='frame'||layer.type==='group'||layer.type==='grup')walk(layer.children);
+	});
+	walk(d.layers);return d;
+}
+const MIGRATE={1:d=>d,2:d=>d,3:d=>d,4:d=>d,5:d=>d,6:d=>d,7:d=>d,8:migrateV8FrameParents,9:migrateV9FrameClip};
 function migrate(d){let v=Math.floor(num(d.version,1));d={...d};while(v<FMT_VERSION){if(MIGRATE[v])d=MIGRATE[v](d);v++;}d.version=FMT_VERSION;return d;}
 function tree(L,g,fid=0){
 	const out=[],seen=new Set();
@@ -76,6 +84,7 @@ function ser(s){
 	if(s.type==='rect'||s.type==='frame')st.appearance.corner_radii=(s.radii||[s.r,s.r,s.r,s.r]).map(rd);
 	if(s.type==='path')st.path={closed:!!s.closed,points:s.pts.map(p=>{const o={x:rd(p.x-b.x),y:rd(p.y-b.y)};if(hasH(p.ho))o.handle_out={x:rd(p.ho.x),y:rd(p.ho.y)};if(hasH(p.hi))o.handle_in={x:rd(p.hi.x),y:rd(p.hi.y)};return o;})};
 	const layer={id:s.id,type:isLine?'line':(T_OUT[s.type]||s.type),name:s.name,fid:parentFrame?parentFrame.id:0,visible:!s.hid,locked:!!s.lock,setting:st};
+	if(s.type==='frame')layer.clip_content=s.clipContent!==false;
 	if(s.type==='frame'){layer.collapsed=!!s.c;layer.children=tree(S,0,s.id);}
 	return layer;
 }
@@ -92,6 +101,7 @@ function des(l){
 	if(Array.isArray(st.fills)){s.fills=st.fills.map(p=>desPaint(p,'fill',s.fill));syncLegacyPaint(s,'fill');}
 	if(Array.isArray(st.strokes)){s.strokes=st.strokes.map(p=>desPaint(p,'stroke',s.stroke));syncLegacyPaint(s,'stroke');}
 	s.hid=l.visible===false;s.lock=!!l.locked;if(st.export&&st.export.visible===false)s.exp=false;
+	if(type==='frame')s.clipContent=l.clip_content!==false;
 	if(typeof l.name==='string'&&l.name.trim())s.name=l.name.trim().slice(0,80);
 	if(type==='polygon')s.n=Math.round(Math.min(20,Math.max(3,num(st.polygon&&st.polygon.sides,3))));
 	if(type==='star')s.n=Math.round(Math.min(20,Math.max(3,num(st.star&&st.star.points,5))));
@@ -139,11 +149,12 @@ function fromJSON(d){
 		if(!valid)s.fid=0;
 	});
 	uid=nx;
-	return {S:items.map(i=>i[0]),GR:groups,GN:gc+1,skipped,from,name:typeof d.name==='string'&&d.name.trim()?d.name.trim().slice(0,100):'Tanpa judul',view:d.view,settings:d.settings};
+	const loadedGuides=Array.isArray(d.guides)?d.guides.filter(g=>g&&['x','y'].includes(g.v)&&Number.isFinite(+g.t)).slice(0,1000).map(g=>({v:g.v,t:+g.t})):[];
+	return {S:items.map(i=>i[0]),GR:groups,GN:gc+1,skipped,from,name:typeof d.name==='string'&&d.name.trim()?d.name.trim().slice(0,100):'Tanpa judul',view:d.view,settings:d.settings,guides:loadedGuides};
 }
-const toJSON=()=>({app:'MiniFigma',version:FMT_VERSION,name:projName,view:{x:rd(V.x),y:rd(V.y),zoom:Math.round(V.z*1000)/1000},settings:{grid:chk('#cg'),snap_grid:chk('#mg'),snap_objects:chk('#mo')},layers:tree(S,0,0)});
+const toJSON=()=>({app:'MiniFigma',version:FMT_VERSION,name:projName,view:{x:rd(V.x),y:rd(V.y),zoom:Math.round(V.z*1000)/1000},settings:{grid:chk('#cg'),snap_grid:chk('#mg'),snap_objects:chk('#mo')},guides:guides.map(g=>({v:g.v,t:rd(g.t)})),layers:tree(S,0,0)});
 function applyProject(r){
-	S=r.S;GR=r.GR||{};gn=r.GN||1;normalize();projName=r.name;$('#pname').val(projName);
+	S=r.S;GR=r.GR||{};gn=r.GN||1;guides=r.guides||[];normalize();projName=r.name;$('#pname').val(projName);
 	const v=r.view;if(v&&isFinite(+v.x)&&isFinite(+v.y)&&+v.zoom>0)V={x:+v.x,y:+v.y,z:Math.min(32,Math.max(.05,+v.zoom))};
 	const g=r.settings;if(g&&typeof g==='object'){if('grid' in g)$('#cg').prop('checked',!!g.grid);if('snap_grid' in g)$('#mg').prop('checked',!!g.snap_grid);if('snap_objects' in g)$('#mo').prop('checked',!!g.snap_objects);}setSel([]);
 }
@@ -165,14 +176,14 @@ MF.init.push(function initSaving(){
 	});
 	$('#jnew').on('click',()=>{
 		if(S.length&&!confirm('Mulai proyek baru? Perubahan yang belum disimpan ke JSON akan hilang.'))return;
-		S=[];uid=1;GR={};gn=1;projName='Tanpa judul';$('#pname').val(projName);setSel([]);refresh();save();
+		S=[];uid=1;GR={};gn=1;guides=[];projName='Tanpa judul';$('#pname').val(projName);setSel([]);refresh();save();
 	});
 	$('#pname').on('input',()=>{projName=$('#pname').val();save();});
 	$('#exp').on('click',()=>{
 		const E=S.filter(s=>s.exp!==false&&!frameEffectivelyHidden(s));if(!E.length)return;let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
 		E.forEach(s=>{const b=bbox(s),strokePad=getPaintLayers(s,'stroke').reduce((m,p)=>Math.max(m,(+p.weight||0)*(p.startArrow!=='none'||p.endArrow!=='none'?4:p.position==='center'?.5:1)),s.sw/2),p=strokePad+(s.fx||[]).reduce((m,e)=>Math.max(m,Math.abs(e.x||0)+Math.abs(e.y||0)+(e.b||0)*2),0);
 			[[b.x,b.y],[b.x+b.w,b.y],[b.x+b.w,b.y+b.h],[b.x,b.y+b.h]].forEach(q=>{const r=rp(s,q[0],q[1]);x0=Math.min(x0,r[0]-p);y0=Math.min(y0,r[1]-p);x1=Math.max(x1,r[0]+p);y1=Math.max(y1,r[1]+p);});});
-		const c=document.createElement('canvas');c.width=Math.ceil(x1-x0);c.height=Math.ceil(y1-y0);const g=c.getContext('2d');g.translate(-x0,-y0);E.forEach(s=>paint(g,s));
+		const c=document.createElement('canvas');c.width=Math.ceil(x1-x0);c.height=Math.ceil(y1-y0);const g=c.getContext('2d');g.translate(-x0,-y0);paintHierarchy(g,null,s=>E.includes(s));
 		$('<a>').attr({href:c.toDataURL('image/png'),download:'desain.png'})[0].click();
 	});
 });

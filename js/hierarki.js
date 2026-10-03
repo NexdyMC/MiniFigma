@@ -83,6 +83,11 @@ function editFrameTitle(frame){
 	$input.trigger('focus').trigger('select');
 }
 function drawFrameHierarchyOverlay(ctx){
+	const target=drag&&drag.k==='move'&&drag.frameTarget;
+	if(target&&!frameEffectivelyHidden(target)){
+		const q=[[target.x,target.y],[target.x+target.w,target.y],[target.x+target.w,target.y+target.h],[target.x,target.y+target.h]].map(p=>w2s(...rp(target,...p)));
+		ctx.save();ctx.strokeStyle='#0d99ff';ctx.lineWidth=2.5;ctx.beginPath();q.forEach((point,i)=>ctx[i?'lineTo':'moveTo'](point[0],point[1]));ctx.closePath();ctx.stroke();ctx.restore();
+	}
 	if(hoveredFrame&&!frameEffectivelyHidden(hoveredFrame)){
 		const q=[[hoveredFrame.x,hoveredFrame.y],[hoveredFrame.x+hoveredFrame.w,hoveredFrame.y],[hoveredFrame.x+hoveredFrame.w,hoveredFrame.y+hoveredFrame.h],[hoveredFrame.x,hoveredFrame.y+hoveredFrame.h]].map(p=>w2s(...rp(hoveredFrame,...p)));
 		ctx.save();ctx.strokeStyle='rgba(13,153,255,.8)';ctx.lineWidth=1;
@@ -96,6 +101,15 @@ function drawFrameHierarchyOverlay(ctx){
 		});
 		ctx.restore();
 	}
+}
+function frameMoveRoots(items){
+	return items.filter(s=>!items.some(parent=>parent!==s&&parent.type==='frame'&&kidsOf(parent).includes(s)));
+}
+function frameDropTarget(x,y,items,disabled=false){
+	if(disabled)return null;
+	const roots=frameMoveRoots(items),excluded=[...items,...kidsFor(items)];
+	return S.slice().reverse().find(frame=>frame.type==='frame'&&!excluded.includes(frame)&&
+		roots.every(s=>canSetFrameParent(s,frame))&&hit(frame,x,y)&&frameClipContains(frame,x,y))||null;
 }
 function canSetFrameParent(s,parent){
 	const seen=new Set();let current=parent;

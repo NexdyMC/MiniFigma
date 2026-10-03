@@ -116,6 +116,8 @@ function syncFramePanel(){
 	const selectedFrame=selected.length===1&&frames.length===1?frames[0]:null;
 	$('#framepanel').toggleClass('hidden',!show);
 	$('#frameSmoothRow').toggle(frames.length>0||selected.some(s=>s.type==='rect'));
+	$('#frameClipRow').toggle(!!selectedFrame);
+	$('#frameClip').prop('checked',selectedFrame?selectedFrame.clipContent!==false:true).prop('disabled',!selectedFrame);
 	$('#frameWrap').prop('disabled',!selected.length);
 	$('#groupToFrame').prop('disabled',!selected.length);
 	$('#frameRelease,#frameToGroup,#frameSavePreset,#frameRotate').prop('disabled',!selectedFrame);

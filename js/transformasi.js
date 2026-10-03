@@ -29,7 +29,7 @@ function setResizedSelection(drag,wx,wy,keepRatio){
 	const sx=w/(b.w||1),sy=h/(b.h||1),dst={x,y,w,h};
 	old.forEach(({live,src,box})=>{const target=drag.multi?{x:x+(box.x-b.x)*sx,y:y+(box.y-b.y)*sy,w:box.w*sx,h:box.h*sy}:dst;resizeLayer(live,src,target,box);if(live.type==='text'&&live.textBox)fitText(live);});
 }
-function startMove(wx,wy){const it=selAll();drag={k:'move',sx:wx,sy:wy,it,kids:kidsFor(it),b0:ubox(it)};}
+function startMove(wx,wy){const it=selAll();drag={k:'move',sx:wx,sy:wy,it,kids:kidsFor(it),b0:ubox(it),frameTarget:null};}
 function drawSelectionOverlay(ctx){
 	if(sel&&!editingText){
 		const cs=corners(sel);ctx.beginPath();cs.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.closePath();ctx.stroke();ctx.fillStyle='#fff';
@@ -65,7 +65,7 @@ MF.init.push(function initTransform(){
 	MF.down.push({p:75,fn(e,c){const hi=handlePoints().findIndex(q=>Math.hypot(q[0]-c.sx,q[1]-c.sy)<8);if(hi<0)return false;const items=sel?[sel]:multi,b=selectionBox();drag={k:'resize',dir:HANDLE_DIRS[hi],box:{...b},multi:!sel,items:items.map(live=>({live,src:JSON.parse(JSON.stringify(live)),box:bbox(live)}))};return true;}});
 	MF.down.push({p:80,fn(e,c){if(sel&&rotZone(c.sx,c.sy)){const pv=pvt(sel);drag={k:'rot',a0:Math.atan2(c.wy-pv[1],c.wx-pv[0]),r0:sel.rot||0};return true;}return false;}});
 	MF.down.push({p:90,fn(e,c){
-		let h=null;for(let i=S.length-1;i>=0;i--)if(hit(S[i],c.wx,c.wy)){h=S[i];break;}
+		let h=null;for(let i=S.length-1;i>=0;i--)if(hit(S[i],c.wx,c.wy,true)){h=S[i];break;}
 		const cur=selAll(),add=e.shiftKey,unit=hh=>{
 			if(!hh.gid||e.ctrlKey||e.metaKey)return [hh];const cg=sel&&sel.gid?sel.gid:0;
 			if(cg&&inGroup(hh,cg)){const child=childOf(hh,cg);return child?leavesOf(child):[hh];}return leavesOf(rootOf(hh));
@@ -78,13 +78,13 @@ MF.init.push(function initTransform(){
 	MF.move.resize=(e,c)=>{setResizedSelection(drag,c.wx,c.wy,e.shiftKey||(!drag.multi&&drag.items[0].src.ar));syncProps();};
 	MF.move.move=(e,c)=>{
 		const all=[...drag.it,...drag.kids],nx=drag.b0.x+c.wx-drag.sx,ny=drag.b0.y+c.wy-drag.sy,[dx,dy]=snapRect({x:nx,y:ny,w:drag.b0.w,h:drag.b0.h},all),b=ubox(drag.it);
-		all.forEach(s=>move(s,nx+dx-b.x,ny+dy-b.y));syncProps();
+		all.forEach(s=>move(s,nx+dx-b.x,ny+dy-b.y));drag.didMove=drag.didMove||Math.hypot((c.wx-drag.sx)*V.z,(c.wy-drag.sy)*V.z)>3;drag.frameTarget=frameDropTarget(c.wx,c.wy,drag.it,e.ctrlKey);syncProps();
 	};
 	MF.move.box=(e,c)=>{
 		drag.x1=c.sx;drag.y1=c.sy;
 		if(Math.abs(c.sx-drag.x0)+Math.abs(c.sy-drag.y0)>3){
 			const a=s2w(Math.min(drag.x0,c.sx),Math.min(drag.y0,c.sy)),z=s2w(Math.max(drag.x0,c.sx),Math.max(drag.y0,c.sy)),Rc={x:a[0],y:a[1],w:z[0]-a[0],h:z[1]-a[1]};
-			const hits=S.filter(s=>!s.hid&&!s.lock&&!drag.base.includes(s)&&boxHit(s,Rc)),fr=hits.filter(s=>s.type==='frame');let nh=hits.filter(s=>!fr.some(f=>f!==s&&kidsOf(f).includes(s)));
+			const hits=S.filter(s=>!frameEffectivelyHidden(s)&&!frameEffectivelyLocked(s)&&!drag.base.includes(s)&&boxHitVisible(s,Rc)),fr=hits.filter(s=>s.type==='frame');let nh=hits.filter(s=>!fr.some(f=>f!==s&&kidsOf(f).includes(s)));
 			nh=[...new Set(nh.flatMap(s=>s.gid?leavesOf(rootOf(s)):[s]))].filter(s=>!drag.base.includes(s));setSel([...drag.base,...nh]);
 		}
 	};
@@ -95,4 +95,11 @@ MF.init.push(function initTransform(){
 		const rads=sel.radii||[sel.r,sel.r,sel.r,sel.r];rads[drag.i]=Math.round(Math.max(0,Math.min(Math.min(sel.w,sel.h)/2,((q[0]-cx)*sg[0]+(q[1]-cy)*sg[1])/2)));sel.radii=rads;syncProps();
 	};
 	MF.up.box=()=>{if(Math.abs(drag.x1-drag.x0)+Math.abs(drag.y1-drag.y0)<=3&&drag.pend)setSel([drag.pend]);};
+	MF.up.move=(e,c)=>{
+		if(e.ctrlKey||!drag.didMove)return;
+		const roots=frameMoveRoots(drag.it),target=frameDropTarget(c.wx,c.wy,drag.it,false);
+		roots.forEach(s=>setFrameParent(s,target));
+		S=S.filter(s=>!roots.includes(s)).concat(roots);
+		normalize();
+	};
 });

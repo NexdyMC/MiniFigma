@@ -13,6 +13,25 @@ function basePaint(kind,color){
 	return kind==='fill'?{type:'solid',color:color||'#d9d9d9',color2:'#ffffff',angle:0,opacity:100,visible:true}:
 		{type:'solid',color:color||'#d9d9d9',color2:'#ffffff',angle:0,opacity:100,visible:true,weight:1,position:'center',dash:'solid',cap:'butt',join:'round',startArrow:'none',endArrow:'none'};
 }
+function gradientPreview(p){
+	const c1=hex(p.color)||'#d9d9d9',c2=hex(p.color2)||c1,a=cl(p.angle,0,360,0);
+	if(p.type==='radial')return `radial-gradient(circle,${c1} 0%,${c2} 100%)`;
+	if(p.type==='angular')return `conic-gradient(from ${a}deg,${c1},${c2},${c1})`;
+	return `linear-gradient(${a}deg,${c1} 0%,${c2} 100%)`;
+}
+function syncGradientPreview($card,p){
+	if(p.type==='solid'){$card.find('[data-gradient-preview]').css('background','');return;}
+	$card.find('[data-gradient-preview]').css('background',gradientPreview(p));
+}
+function updateGradientCard($card){
+	const type=$card.find('[data-k="type"]').val(),p={
+		type,color:$card.find('[data-k="color"]').val(),color2:$card.find('[data-k="color2"]').val(),
+		angle:$card.find('[data-k="angle"]').val()
+	};
+	$card.find('[data-gradient]').toggleClass('hidden',type==='solid');
+	$card.find('[data-start-label]').text(type==='solid'?'Warna':'Awal · 0%');
+	syncGradientPreview($card,{...p,type});
+}
 function setPaintValue(kind,index,key,value){
 	const selected=selAll(),source=selected.length?getPaintLayers(selected[0],kind)[index]:null,template=source||basePaint(kind);
 	selected.forEach(s=>{
@@ -38,10 +57,15 @@ function paintCard(kind,index,p){
 	const actions=`<button type="button" data-action="pick" class="p-1 rounded hover:bg-neutral-600" title="Pipet warna" aria-label="Pipet warna">${FAIcon('dropper')}</button><button type="button" data-action="visible" class="p-1 rounded hover:bg-neutral-600" title="${p.visible===false?'Tampilkan':'Sembunyikan'}" aria-label="${p.visible===false?'Tampilkan':'Sembunyikan'}">${FAIcon(p.visible===false?'eyeSlash':'eye')}</button><button type="button" data-action="delete" class="p-1 rounded hover:bg-neutral-600" title="Hapus lapisan" aria-label="Hapus lapisan">${FAIcon('trash')}</button>`;
 	const gradients='<option value="solid">Solid</option><option value="linear">Linear</option><option value="radial">Radial</option><option value="angular">Angular</option>';
 	return `<div class="rounded bg-[#383838] p-2 space-y-2" data-kind="${kind}" data-index="${index}">
-		<div class="flex items-center gap-1"><input data-k="color" type="color" value="${color}" aria-label="Warna ${stroke?'garis':'isi'}"><input data-k="hex" value="${color}" maxlength="7" class="num !w-[72px] uppercase" aria-label="Kode warna">${actions}</div>
+		<div class="flex items-center justify-between"><span class="text-neutral-300">${stroke?'Garis':'Isi'} ${index+1}</span><div class="flex items-center">${actions}</div></div>
+		<div class="flex items-center gap-1"><span data-start-label class="w-14 shrink-0 text-neutral-400">${gradient?'Awal · 0%':'Warna'}</span><input data-k="color" type="color" value="${color}" aria-label="Warna awal ${stroke?'garis':'isi'}"><input data-k="hex" value="${color}" maxlength="7" class="num !w-[72px] uppercase" aria-label="Kode warna awal"></div>
 		<div class="flex items-center gap-2"><span class="text-neutral-400 w-8">Opasitas</span><input data-k="opacity" type="range" min="0" max="100" value="${cl(p.opacity,0,100,100)}" class="flex-1 accent-[#0d99ff]"><span data-value="opacity" class="w-8 text-right">${cl(p.opacity,0,100,100)}%</span></div>
 		<label class="flex items-center gap-2"><span class="text-neutral-400 w-8">${stroke?'Jenis':'Isi'}</span><select data-k="type" class="num flex-1">${gradients}</select></label>
-		<div data-gradient class="${gradient?'':'hidden'} space-y-2"><div class="flex items-center gap-1"><input data-k="color2" type="color" value="${hex(p.color2)||'#ffffff'}" aria-label="Warna akhir gradien"><input data-k="hex2" value="${hex(p.color2)||'#ffffff'}" maxlength="7" class="num !w-[72px] uppercase" aria-label="Kode warna akhir"><label class="flex-1">Sudut °<input data-k="angle" type="number" min="0" max="360" class="num" value="${cl(p.angle,0,360,0)}"></label></div></div>
+		<div data-gradient class="${gradient?'':'hidden'} space-y-2">
+			<div data-gradient-preview role="img" aria-label="Pratinjau gradien" class="h-7 rounded border border-white/20" style="${gradient?`background:${gradientPreview(p)}`:''}"></div>
+			<div class="flex items-center gap-1"><span class="w-14 shrink-0 text-neutral-400">Akhir · 100%</span><input data-k="color2" type="color" value="${hex(p.color2)||'#ffffff'}" aria-label="Warna akhir gradien"><input data-k="hex2" value="${hex(p.color2)||'#ffffff'}" maxlength="7" class="num !w-[72px] uppercase" aria-label="Kode warna akhir gradien"></div>
+			<div class="flex items-center gap-2"><span class="text-neutral-400">Sudut</span><input data-k="angleRange" type="range" min="0" max="360" value="${cl(p.angle,0,360,0)}" class="flex-1 accent-[#0d99ff]"><input data-k="angle" type="number" min="0" max="360" class="num !w-16" value="${cl(p.angle,0,360,0)}" aria-label="Sudut gradien"></div>
+		</div>
 		${stroke?`<div class="grid grid-cols-2 gap-2"><label>Berat<input data-k="weight" type="number" min="0.1" max="200" step="0.5" class="num" value="${cl(p.weight,.1,200,1)}"></label><label>Posisi<select data-k="position" class="num"><option value="center">Tengah</option><option value="inside">Dalam</option><option value="outside">Luar</option></select></label><label>Garis<select data-k="dash" class="num"><option value="solid">Solid</option><option value="dash">Putus</option><option value="dot">Titik</option><option value="dashDot">Garis-titik</option></select></label><label>Ujung<select data-k="cap" class="num"><option value="butt">Rata</option><option value="round">Bulat</option><option value="square">Kotak</option></select></label><label>Sambungan<select data-k="join" class="num"><option value="round">Bulat</option><option value="miter">Tajam</option><option value="bevel">Miring</option></select></label><label>Awal<select data-k="startArrow" class="num"><option value="none">Tanpa panah</option><option value="arrow">Panah</option><option value="triangle">Segitiga</option><option value="line">Terbuka</option><option value="circle">Lingkaran</option><option value="square">Kotak</option><option value="diamond">Wajik</option></select></label><label class="col-span-2">Akhir<select data-k="endArrow" class="num"><option value="none">Tanpa panah</option><option value="arrow">Panah</option><option value="triangle">Segitiga</option><option value="line">Terbuka</option><option value="circle">Lingkaran</option><option value="square">Kotak</option><option value="diamond">Wajik</option></select></label></div>`:''}
 	</div>`;
 }
@@ -127,6 +151,7 @@ MF.init.push(function initPanel(){
 		if(sel&&sel.type==='frame'){sel.w=framePresetSize.w;sel.h=framePresetSize.h;draw();save();}
 	});
 	$('#frameApply').on('click',applyPresetSize);$('#frameRotate').on('click',flipFrameOrientation);$('#frameSavePreset').on('click',saveFramePreset);
+	$('#frameClip').on('change',function(){if(!sel||sel.type!=='frame')return;sel.clipContent=this.checked;refresh();save();});
 	$('#frameWrap,#groupToFrame').on('click',wrapSelectionInFrame);$('#frameRelease').on('click',releaseSelectedFrame);$('#frameToGroup').on('click',frameToGroup);
 	$('#frameSmooth').on('input',function(){
 		const value=cl(this.value,0,100,0);selAll().forEach(s=>{if(s.type==='frame'||s.type==='rect')s.smooth=value;});
@@ -149,7 +174,10 @@ MF.init.push(function initPanel(){
 	$('#pbm').html(BM.map(b=>`<option value="${b}">${b}</option>`).join('')).on('change',()=>each(s=>{s.bm=$('#pbm').val();}));
 	$('#pn').on('input',one(s=>{s.n=Math.round(cl($('#pn').val(),3,20,3));}));
 	$('#pfs').on('input',()=>{if(!sel||sel.type!=='text')return;sel.fs=cl($('#pfs').val(),4,999,16);fitText(sel);refresh();save();});
-	$('#pweight').on('change',()=>{if(!sel||sel.type!=='text')return;sel.fontWeight=cl($('#pweight').val(),100,900,400);sel.bold=sel.fontWeight>=600;fitText(sel);refresh();save();});
+	$('#pweight').on('input',function(){
+		const raw=parseFloat(this.value),weight=Number.isFinite(raw)?FONT_WEIGHTS.reduce((best,[value])=>Math.abs(value-raw)<Math.abs(best-raw)?value:best,400):400;
+		$('#pweightName').text(FONT_WEIGHTS.find(item=>item[0]===weight)[1]);
+	}).on('change',()=>{if(!sel||sel.type!=='text')return;sel.fontWeight=renderFontWeightOptions(sel.fontFamily,cl($('#pweight').val(),100,900,400));sel.bold=sel.fontWeight>=600;fitText(sel);refresh();save();});
 	$('#pbold,#pitalic,#punderline').on('click',function(){if(!sel||sel.type!=='text')return;const key={pbold:'bold',pitalic:'italic',punderline:'underline'}[this.id];if(key==='bold'){sel.fontWeight=(sel.fontWeight??(sel.bold?700:400))>=600?400:700;sel.bold=sel.fontWeight>=600;}else sel[key]=!sel[key];fitText(sel);refresh();save();});
 	$('#palign').on('change',()=>{if(!sel||sel.type!=='text')return;sel.textAlign=$('#palign').val();fitText(sel);refresh();save();});
 	$('#plh,#pls').on('input',()=>{if(!sel||sel.type!=='text')return;sel.lineHeight=cl($('#plh').val(),50,300,125);sel.letterSpacing=cl($('#pls').val(),-20,100,0);fitText(sel);refresh();save();});
@@ -161,13 +189,14 @@ MF.init.push(function initPanel(){
 	$('#peye').on('click',()=>{const v=!selAll()[0].hid;each(s=>{s.hid=v;});refresh();});
 	$('#fadd').on('click',()=>addPaint('fill'));$('#sadd').on('click',()=>addPaint('stroke'));$('#savecolor').on('click',savePaletteColor);
 	$('#frow,#srow').on('input change','[data-k]',function(e){
-		const $input=$(this),$card=$input.closest('[data-kind]'),kind=$card.attr('data-kind'),index=+$card.attr('data-index'),key=$input.attr('data-k');
+		const $input=$(this),$card=$input.closest('[data-kind]'),kind=$card.attr('data-kind'),index=+$card.attr('data-index'),rawKey=$input.attr('data-k'),key=rawKey==='angleRange'?'angle':rawKey;
 		if(key==='hex'||key==='hex2'){
-			const h=hex($input.val());if(!h){if(e.type==='change')note('Kode warna tidak valid. Gunakan format #RRGGBB.');return;}const target=key==='hex'?'color':'color2';$card.find(`[data-k="${target}"]`).val(h);setPaintValue(kind,index,target,h);return;
+			const h=hex($input.val());if(!h){if(e.type==='change')note('Kode warna tidak valid. Gunakan format #RRGGBB.');return;}const target=key==='hex'?'color':'color2';$card.find(`[data-k="${target}"]`).val(h);updateGradientCard($card);setPaintValue(kind,index,target,h);return;
 		}
-		if(key==='color'||key==='color2'){const h=hex($input.val());if(h){$card.find(`[data-k="${key==='color'?'hex':'hex2'}"]`).val(h);setPaintValue(kind,index,key,h);}return;}
+		if(key==='color'||key==='color2'){const h=hex($input.val());if(h){$card.find(`[data-k="${key==='color'?'hex':'hex2'}"]`).val(h);updateGradientCard($card);setPaintValue(kind,index,key,h);}return;}
 		const value=key==='opacity'||key==='weight'||key==='angle'?cl($input.val(),key==='weight'?.1:0,key==='weight'?200:360,key==='weight'?1:100):$input.val();
-		if(key==='type')$card.find('[data-gradient]').toggleClass('hidden',value==='solid');
+		if(key==='angle')$card.find('[data-k="angle"],[data-k="angleRange"]').val(value);
+		if(key==='type'||key==='angle')updateGradientCard($card);
 		if(key==='opacity')$card.find('[data-value="opacity"]').text(value+'%');
 		setPaintValue(kind,index,key,value);
 	});

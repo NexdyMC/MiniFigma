@@ -403,9 +403,13 @@ Legenda: `[x]` sudah lengkap · `[~]` ada tapi terbatas · `[ ]` belum ada
 - [x] Ubah grup menjadi frame, dan frame menjadi grup
 - [x] Frame di dalam frame (bersarang): saat ini hanya lewat aturan titik tengah, belum induk-anak nyata
 - [x] Corner smoothing (sudut ala iOS) untuk frame dan persegi
+- [~] Frame di dalam frame (bersarang): hierarki induk–anak ada, tetapi isi belum terpotong (lihat 6.14)
+
 
 ### 6.13 Hierarki, seleksi, dan label frame
-- [x] Hierarki induk–anak nyata: seret objek ke dalam/luar frame mengganti induknya otomatis (menggantikan aturan titik tengah)
+- [~] Hierarki induk–anak nyata: seret objek ke dalam/luar frame mengganti induknya otomatis
+      ⚠ BUG: objek dari luar yang diseret masuk ke frame belum otomatis menjadi anak (lihat 6.14)
+(… baris lainnya tetap …)
 - [x] Anak ikut berputar saat frame diputar
 - [x] X/Y anak ditampilkan relatif terhadap frame induk
 - [x] Label judul frame di kanvas: klik = pilih, seret = pindahkan, klik dua kali = ganti nama
@@ -416,7 +420,25 @@ Legenda: `[x]` sudah lengkap · `[~]` ada tapi terbatas · `[ ]` belum ada
 - [x] Menghapus frame ikut menghapus isinya
 - [x] Sorot (hover) frame dan anak saat kursor lewat
 
-### 6.14 Constraints dan resize responsif
+
+### 6.14 Clip isi frame dan penggantian induk saat seret  ← BARU
+- [ ] Anak frame dipotong oleh batas frame (bagian yang keluar tidak tampak)
+- [ ] Clip mengikuti radius sudut dan rotasi frame
+- [ ] Clip bertingkat untuk frame bersarang
+- [ ] Efek anak (bayangan, glow, blur) ikut terpotong
+- [ ] Overlay seleksi, handle, dan label tidak terpotong
+- [ ] Hit-test dan marquee hanya pada bagian yang terlihat
+- [ ] Ekspor PNG ikut terpotong
+- [ ] Opsi "Clip konten" per frame (default aktif) + disimpan di JSON (versi format naik, ada migrasi)
+- [ ] Frame target ditentukan oleh posisi kursor saat menyeret (frame teratas di bawah kursor)
+- [ ] Sorotan biru pada frame target selama menyeret
+- [ ] Lepas mouse di dalam frame = jadi anak; di luar semua frame = jadi anak root (dua arah)
+- [ ] Posisi visual tidak melompat saat induk berganti (konversi koordinat relatif)
+- [ ] Berlaku untuk multi-seleksi, grup, dan frame ke dalam frame (kecuali ke dirinya sendiri)
+- [ ] Ctrl saat seret = nonaktifkan penggantian induk
+- [ ] Pindah + ganti induk = satu langkah undo
+
+### 6.15 Constraints dan resize responsif
 - [ ] Constraint horizontal: Kiri, Kanan, Kiri & Kanan, Tengah, Skala
 - [ ] Constraint vertikal: Atas, Bawah, Atas & Bawah, Tengah, Skala
 - [ ] Widget constraint di panel (kotak dengan garis penjangkar yang bisa diklik)
@@ -425,7 +447,7 @@ Legenda: `[x]` sudah lengkap · `[~]` ada tapi terbatas · `[ ]` belum ada
 - [ ] Sesuaikan ukuran frame ke isinya (Resize to fit)
 - [ ] Constraint dinonaktifkan otomatis untuk anak yang diatur auto layout
 
-### 6.15 Auto layout
+### 6.16 Auto layout
 - [ ] Tambah auto layout ke frame atau seleksi (Shift+A); hapus (Ctrl+Alt+Shift+A)
 - [ ] Flow (arah): Freeform, Vertikal, Horizontal, Grid (sesuai panel Layout di Figma)
 - [ ] Wrap: lanjut ke baris/kolom berikutnya + jarak antar baris
@@ -442,7 +464,7 @@ Legenda: `[x]` sudah lengkap · `[~]` ada tapi terbatas · `[ ]` belum ada
 - [ ] Auto layout bersarang
 - [ ] Mode Grid: jumlah baris dan kolom, jarak antar sel, rentang sel (span)
 
-### 6.16 Layout grid (grid panduan di frame)
+### 6.17 Layout grid (grid panduan di frame)
 Berbeda dengan grid piksel di 6.1: ini grid desain milik tiap frame.
 - [ ] Beberapa layout grid per frame, tipe Grid (persegi), Kolom, dan Baris
 - [ ] Kolom/Baris: jumlah, gutter, margin/offset, lebar/tinggi, perataan (Stretch, Kiri, Tengah, Kanan)
@@ -453,7 +475,7 @@ Berbeda dengan grid piksel di 6.1: ini grid desain milik tiap frame.
 - [ ] Preset 12 / 8 / 4 kolom (desktop / tablet / ponsel)
 - [ ] Layout grid tidak ikut diekspor
 
-### 6.17 Prototipe (alur antar frame)
+### 6.18 Prototipe (alur antar frame)
 - [ ] Tab Design / Prototype di panel kanan
 - [ ] Titik awal alur (Flow starting point) pada frame, beberapa alur bernama
 - [ ] Hubungkan objek/frame ke frame tujuan dengan panah koneksi
@@ -467,7 +489,7 @@ Berbeda dengan grid piksel di 6.1: ini grid desain milik tiap frame.
 - [ ] Warna latar prototipe dan skala pratinjau (Fit, Fill, 100%)
 - [ ] Tampil/sembunyikan semua panah koneksi
 
-### 6.18 Komponen dan varian
+### 6.19 Komponen dan varian
 - [ ] Buat komponen dari frame atau seleksi (Ctrl+Alt+K); komponen utama diberi penanda
 - [ ] Instance: salinan terhubung yang ikut berubah saat komponen utama berubah
 - [ ] Override pada instance (teks, warna, efek, visibilitas) dan reset override
@@ -479,7 +501,7 @@ Berbeda dengan grid piksel di 6.1: ini grid desain milik tiap frame.
 - [ ] Panel Aset: daftar komponen, pencarian, seret ke kanvas
 - [ ] Ekspor/impor pustaka komponen antar proyek (JSON)
 
-### 6.19 Style dan variabel
+### 6.20 Style dan variabel
 Style warna sudah ada di 6.6 (palet / style tersimpan), tidak diulang.
 - [ ] Style teks (font, ukuran, bobot, spasi) dan style efek
 - [ ] Style layout grid
@@ -490,7 +512,7 @@ Style warna sudah ada di 6.6 (palet / style tersimpan), tidak diulang.
 - [ ] Panel variabel berbentuk tabel
 - [ ] Ekspor/impor variabel sebagai token JSON
 
-### 6.20 Organisasi dan serah-terima
+### 6.21 Organisasi dan serah-terima
 - [ ] Section (Shift+Alt+S): wadah pengelompok frame dengan nama dan warna latar; frame di dalamnya ikut bergerak
 - [ ] Tidy up: rapikan objek/frame terpilih menjadi baris/kolom dengan jarak seragam
 - [ ] Duplikat frame diletakkan di samping kanan, tidak menumpuk

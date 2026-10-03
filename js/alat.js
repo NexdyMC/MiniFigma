@@ -4,7 +4,7 @@ const SHI={rect:'rect',line:'line',ellipse:'ellipse',polygon:'polygon',star:'sta
 function setTool(t){
 	if(draft&&t!=='pen')draft=null;tool=t;
 	if(SH[t])$('#shapeBtn').data('t',t).html(I(t,18)).attr('title',SH[t]);
-	$('.tool').each(function(){$(this).toggleClass('on',$(this).data('t')===t);});cv.style.cursor=t==='select'?'default':'crosshair';$('#hint').text(HINT[t]||'Seret di kanvas untuk menggambar.');
+	$('.tool').each(function(){$(this).toggleClass('on',$(this).data('t')===t);});cv.style.cursor=t==='select'?'default':t==='hand'?'grab':'crosshair';$('#hint').text(HINT[t]||'Seret di kanvas untuk menggambar.');
 	if(typeof syncFramePanel==='function'){syncFramePanel();$('#empty').toggle(!selAll().length&&t!=='frame');}
 }
 MF.init.push(function initTools(){
@@ -43,7 +43,7 @@ MF.init.push(function initTools(){
 		if(e.code==='Space'){space=true;e.preventDefault();return true;}
 		if(k==='a'&&mod){e.preventDefault();setSel([...S]);refresh();return true;}
 		if(!mod&&!e.shiftKey){
-			const map={v:'select',f:'frame',r:'rect',o:'ellipse',l:'line',p:'pen',t:'text'};
+			const map={v:'select',h:'hand',f:'frame',r:'rect',o:'ellipse',l:'line',p:'pen',t:'text'};
 			if(map[k]){setTool(map[k]);return true;}if(k==='b'){setTool('pencil');return true;}
 		}
 		if(!mod&&e.shiftKey&&(k==='r'||k==='o')){setTool(k==='r'?'polygon':'star');return true;}

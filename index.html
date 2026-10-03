@@ -64,6 +64,7 @@
       <button class="tool" data-t="pen" data-i="pen" title="Pena (P)"></button>
       <button class="tool" data-t="pencil" data-i="pencil" title="Pensil / gambar bebas (B)"></button>
       <button class="tool" data-t="text" data-i="text" title="Teks (T)"></button>
+      <button class="tool" data-t="hand" data-i="hand" title="Mode tangan (H)"></button>
     </div>
   </div>
 
@@ -97,7 +98,16 @@
           <label class="block">Font<select id="pfont" class="num"></select></label>
           <button id="fontmanage" class="w-full px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600 text-left">Kelola font lokal…</button>
           <label class="block">Ukuran<input id="pfs" type="number" min="4" max="999" class="num"></label>
-          <label class="block">Bobot font<select id="pweight" class="num"></select></label>
+          <label class="block">Bobot font</label>
+          <div class="grid grid-cols-[1fr_auto] items-center gap-2">
+            <input id="pweight" type="number" min="100" max="900" step="100" list="fontWeightOptions" class="num" aria-label="Bobot font (100–900)">
+            <span id="pweightName" class="min-w-20 text-right text-neutral-300">Regular</span>
+          </div>
+          <datalist id="fontWeightOptions">
+            <option value="100" label="Thin"></option><option value="200" label="Extra Light"></option><option value="300" label="Light"></option>
+            <option value="400" label="Regular"></option><option value="500" label="Medium"></option><option value="600" label="Semi Bold"></option>
+            <option value="700" label="Bold"></option><option value="800" label="Extra Bold"></option><option value="900" label="Black"></option>
+          </datalist>
           <div class="grid grid-cols-3 gap-1">
             <button id="pbold" type="button" class="txt-toggle px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600 font-bold" title="Tebal">B</button>
             <button id="pitalic" type="button" class="txt-toggle px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600 italic" title="Miring">I</button>
@@ -154,6 +164,7 @@
       </div>
       <div class="p-3 space-y-2 border-b border-neutral-700">
         <div class="font-semibold">Struktur</div>
+        <label id="frameClipRow" class="flex items-center gap-2"><input id="frameClip" type="checkbox" checked class="accent-[#0d99ff]">Clip konten</label>
         <button id="frameWrap" type="button" class="w-full px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Bungkus seleksi dengan frame</button>
         <button id="frameRelease" type="button" class="w-full px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Lepas frame, pertahankan isi</button>
         <button id="frameToGroup" type="button" class="w-full px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Ubah frame menjadi grup</button>

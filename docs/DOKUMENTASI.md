@@ -271,10 +271,10 @@ Legenda: `[x]` sudah lengkap · `[~]` ada tapi terbatas · `[ ]` belum ada
 - [x] Magnet ke objek (tepi dan tengah) + garis panduan merah
 - [x] Label ukuran (L × T) di bawah seleksi
 - [x] Render hanya saat ada perubahan (tanpa loop animasi terus-menerus)
-- [ ] Zoom to fit (Shift+1) dan zoom ke seleksi (Shift+2)
-- [ ] Penggaris dan guide yang bisa ditarik
-- [ ] Minimap
-- [ ] Mode tangan (H)
+- [x] Zoom to fit (Shift+1) dan zoom ke seleksi (Shift+2)
+- [x] Penggaris dan guide yang bisa ditarik
+- [x] Minimap
+- [x] Mode tangan (H)
 
 ### 6.2 Alat gambar
 - [x] Pilih (V)
@@ -327,7 +327,7 @@ Legenda: `[x]` sudah lengkap · `[~]` ada tapi terbatas · `[ ]` belum ada
 - [x] Indentasi layer di dalam frame
 - [ ] Pencarian layer
 - [ ] Halaman (pages) ganda
-- [ ] Clip konten frame (isi frame yang keluar batas masih tergambar)
+- [x] Clip konten frame (opsi per frame; aktif secara default)
 - [ ] Auto layout, constraints, komponen/instance
 
 ### 6.6 Panel properti
@@ -350,7 +350,7 @@ Legenda: `[x]` sudah lengkap · `[~]` ada tapi terbatas · `[ ]` belum ada
 - [x] Kecerahan, kontras, saturasi, rotasi warna
 - [x] Abu-abu, sepia, invert
 - [x] Banyak efek per objek, bisa diaktifkan/dimatikan/dihapus
-- [ ] Efek untuk teks: hanya sebagian (bayangan dalam dan background blur dilewati untuk teks)
+- [~] Efek untuk teks: semua tipe dirender; inner shadow dan background blur memakai mask Canvas, sehingga hasilnya belum dijamin identik piksel dengan Figma
 
 ### 6.8 Teks
 - [x] Isi teks dan ukuran font
@@ -359,8 +359,8 @@ Legenda: `[x]` sudah lengkap · `[~]` ada tapi terbatas · `[ ]` belum ada
 - [x] Rata kiri / tengah / kanan, jarak baris, jarak huruf
 - [x] Edit teks langsung di kanvas (Enter = baris baru, Ctrl+Enter = selesai)
 - [x] Lebar kotak teks dapat diatur dari 100–900 px
-- [x] **Bobot font (font weight)**: dropdown 9 tingkat
-- [x] Hanya tampilkan bobot yang tersedia untuk font terpilih
+- [x] **Bobot font (font weight)**: input angka 100–900 dengan nama bobot
+- [~] Bobot yang tersedia bergantung pada font; browser dapat memakai bobot terdekat
 - [x] Bobot tersimpan di JSON (`setting.text.font_weight`, angka 100–900)
 
 
@@ -369,11 +369,11 @@ Legenda: `[x]` sudah lengkap · `[~]` ada tapi terbatas · `[ ]` belum ada
 - [x] Autosave ke localStorage
 - [x] Simpan JSON (Ctrl+S), Buka JSON, Baru, nama proyek
 - [x] Validasi file, migrasi versi, batas 10 MB, pesan galat
-- [~] Ekspor PNG: seluruh objek terlihat sekaligus, skala 1x, latar transparan
-- [ ] Ekspor SVG, JPG, PDF
-- [ ] Ekspor per objek / per frame / seleksi
-- [ ] Skala ekspor 2x, 3x, 4x
-- [ ] Salin sebagai PNG ke clipboard
+- [x] Ekspor PNG: seluruh objek terlihat sekaligus, latar transparan
+- [~] Ekspor SVG, JPG, PDF (SVG dan PDF berupa gambar raster)
+- [x] Ekspor per seleksi, per frame, atau seluruh objek terlihat
+- [x] Skala ekspor 1x, 2x, 3x, 4x
+- [x] Salin seleksi sebagai PNG ke clipboard (atau semua objek jika tidak ada seleksi)
 
 ### 6.10 Clipboard dan pintasan
 - [x] **Copy / Paste / Cut** (Ctrl+C, V, X)
@@ -401,15 +401,12 @@ Legenda: `[x]` sudah lengkap · `[~]` ada tapi terbatas · `[ ]` belum ada
 - [x] Bungkus seleksi dengan frame (Ctrl+Alt+G)
 - [x] Lepas frame tanpa menghapus isinya
 - [x] Ubah grup menjadi frame, dan frame menjadi grup
-- [x] Frame di dalam frame (bersarang): saat ini hanya lewat aturan titik tengah, belum induk-anak nyata
+- [x] Frame bersarang dengan hierarki induk–anak nyata
 - [x] Corner smoothing (sudut ala iOS) untuk frame dan persegi
-- [~] Frame di dalam frame (bersarang): hierarki induk–anak ada, tetapi isi belum terpotong (lihat 6.14)
 
 
 ### 6.13 Hierarki, seleksi, dan label frame
-- [~] Hierarki induk–anak nyata: seret objek ke dalam/luar frame mengganti induknya otomatis
-      ⚠ BUG: objek dari luar yang diseret masuk ke frame belum otomatis menjadi anak (lihat 6.14)
-(… baris lainnya tetap …)
+- [x] Hierarki induk–anak nyata: seret objek ke dalam/luar frame mengganti induknya otomatis
 - [x] Anak ikut berputar saat frame diputar
 - [x] X/Y anak ditampilkan relatif terhadap frame induk
 - [x] Label judul frame di kanvas: klik = pilih, seret = pindahkan, klik dua kali = ganti nama
@@ -422,21 +419,21 @@ Legenda: `[x]` sudah lengkap · `[~]` ada tapi terbatas · `[ ]` belum ada
 
 
 ### 6.14 Clip isi frame dan penggantian induk saat seret  ← BARU
-- [ ] Anak frame dipotong oleh batas frame (bagian yang keluar tidak tampak)
-- [ ] Clip mengikuti radius sudut dan rotasi frame
-- [ ] Clip bertingkat untuk frame bersarang
-- [ ] Efek anak (bayangan, glow, blur) ikut terpotong
-- [ ] Overlay seleksi, handle, dan label tidak terpotong
-- [ ] Hit-test dan marquee hanya pada bagian yang terlihat
-- [ ] Ekspor PNG ikut terpotong
-- [ ] Opsi "Clip konten" per frame (default aktif) + disimpan di JSON (versi format naik, ada migrasi)
-- [ ] Frame target ditentukan oleh posisi kursor saat menyeret (frame teratas di bawah kursor)
-- [ ] Sorotan biru pada frame target selama menyeret
-- [ ] Lepas mouse di dalam frame = jadi anak; di luar semua frame = jadi anak root (dua arah)
-- [ ] Posisi visual tidak melompat saat induk berganti (konversi koordinat relatif)
-- [ ] Berlaku untuk multi-seleksi, grup, dan frame ke dalam frame (kecuali ke dirinya sendiri)
-- [ ] Ctrl saat seret = nonaktifkan penggantian induk
-- [ ] Pindah + ganti induk = satu langkah undo
+- [x] Anak frame dipotong oleh batas frame (bagian yang keluar tidak tampak)
+- [x] Clip mengikuti radius sudut dan rotasi frame
+- [x] Clip bertingkat untuk frame bersarang
+- [x] Efek anak (bayangan, glow, blur) ikut terpotong
+- [x] Overlay seleksi, handle, dan label tidak terpotong
+- [x] Hit-test dan marquee hanya pada bagian yang terlihat
+- [x] Ekspor PNG ikut terpotong
+- [x] Opsi "Clip konten" per frame (default aktif) + disimpan di JSON (versi format naik, ada migrasi)
+- [x] Frame target ditentukan oleh posisi kursor saat menyeret (frame teratas di bawah kursor)
+- [x] Sorotan biru pada frame target selama menyeret
+- [x] Lepas mouse di dalam frame = jadi anak; di luar semua frame = jadi anak root (dua arah)
+- [x] Posisi visual tidak melompat saat induk berganti (konversi koordinat relatif)
+- [x] Berlaku untuk multi-seleksi, grup, dan frame ke dalam frame (kecuali ke dirinya sendiri)
+- [x] Ctrl saat seret = nonaktifkan penggantian induk
+- [x] Pindah + ganti induk = satu langkah undo
 
 ### 6.15 Constraints dan resize responsif
 - [ ] Constraint horizontal: Kiri, Kanan, Kiri & Kanan, Tengah, Skala

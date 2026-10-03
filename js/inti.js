@@ -17,7 +17,7 @@ const FRAME_PRESETS=[
 	{category:'Kertas',name:'A4',w:595,h:842},{category:'Kertas',name:'A3',w:842,h:1191},{category:'Kertas',name:'Letter',w:612,h:792},{category:'Kertas',name:'Legal',w:612,h:1008},
 	{category:'Media sosial',name:'Instagram Post',w:1080,h:1080},{category:'Media sosial',name:'Instagram Portrait',w:1080,h:1350},{category:'Media sosial',name:'Instagram Story',w:1080,h:1920},{category:'Media sosial',name:'Facebook Cover',w:1640,h:924},{category:'Media sosial',name:'YouTube Thumbnail',w:1280,h:720},{category:'Media sosial',name:'LinkedIn Cover',w:1584,h:396}
 ];
-const HINT={select:'Klik untuk memilih, seret di area kosong untuk memilih banyak objek (Shift = tambah/kurangi). Spasi + seret = geser, Ctrl + scroll = zoom. Klik dua kali teks untuk mengedit. Dekati sudut dari luar untuk memutar (Shift = 15°, Alt = pivot).',pen:'Klik = titik sudut, klik + seret = titik melengkung. Klik titik pertama untuk menutup. Enter / Esc selesai.',pencil:'Seret di kanvas untuk menggambar bebas.',text:'Klik di kanvas lalu ketik. Enter membuat baris baru, Ctrl+Enter simpan, Esc batalkan.',hand:'Seret kanvas untuk menggeser tampilan. Shift+1 = muat semua, Shift+2 = muat seleksi.'};
+const HINT={select:'Klik untuk memilih',pen:'Klik = titik sudut, klik + seret = titik melengkung.',pencil:'Seret di kanvas untuk menggambar bebas.',text:'Klik di kanvas lalu ketik. Enter membuat baris baru, Ctrl+Enter simpan, Esc batalkan.',hand:'Seret kanvas untuk menggeser tampilan. Shift+1 = muat semua, Shift+2 = muat seleksi.'};
 const s2w=(x,y)=>[(x-V.x)/V.z,(y-V.y)/V.z],w2s=(x,y)=>[x*V.z+V.x,y*V.z+V.y];
 const chk=id=>$(id).is(':checked');
 const P={

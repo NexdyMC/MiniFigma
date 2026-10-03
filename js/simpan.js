@@ -162,6 +162,114 @@ function load(){
 	try{const raw=localStorage.getItem(LS_KEY);if(raw){applyProject(fromJSON(JSON.parse(raw)));return;}}catch(e){}
 	try{const d=JSON.parse(localStorage.getItem('minifigma2'));if(d&&Array.isArray(d.S)){S=d.S;uid=d.uid||S.length+1;}}catch(e){}
 }
+function exportDescendants(frame){
+	const out=[frame],seen=new Set([frame.id]);
+	let changed=true;
+	while(changed){
+		changed=false;
+		S.forEach(s=>{const p=frameParentOf(s);if(p&&seen.has(p.id)&&!seen.has(s.id)){seen.add(s.id);out.push(s);changed=true;}});
+	}
+	return out;
+}
+function exportItems(scope,frameId){
+	let chosen=[];
+	if(scope==='all')chosen=S.filter(s=>s.exp!==false&&!frameEffectivelyHidden(s));
+	else if(scope==='frame'){
+		const frame=S.find(s=>s.type==='frame'&&s.id===+frameId);
+		if(frame)chosen=exportDescendants(frame);
+	}else{
+		chosen=selAll().filter(s=>!frameEffectivelyHidden(s));
+		chosen.flatMap(s=>s.type==='frame'?exportDescendants(s).slice(1):[]).forEach(s=>{if(!chosen.includes(s))chosen.push(s);});
+	}
+	return chosen.filter(s=>s.exp!==false&&!frameEffectivelyHidden(s));
+}
+function exportBounds(items){
+	const pts=[];
+	const rectFor=(s,pad=0)=>{
+		const b=bbox(s),corners=[[b.x,b.y],[b.x+b.w,b.y],[b.x+b.w,b.y+b.h],[b.x,b.y+b.h]].map(p=>rp(s,p[0],p[1]));
+		const xs=corners.map(p=>p[0]),ys=corners.map(p=>p[1]);
+		return {x:Math.min(...xs)-pad,y:Math.min(...ys)-pad,x2:Math.max(...xs)+pad,y2:Math.max(...ys)+pad};
+	};
+	items.forEach(s=>{
+		const strokes=getPaintLayers(s,'stroke').filter(p=>p.visible!==false);
+		let pad=strokes.reduce((m,p)=>Math.max(m,(+p.weight||0)*(p.startArrow!=='none'||p.endArrow!=='none'?4:p.position==='center'?.5:1)),s.sw/2);
+		(s.fx||[]).filter(e=>e.on!==false&&['drop_shadow','glow','layer_blur'].includes(e.t)).forEach(e=>{pad+=Math.abs(e.x||0)+Math.abs(e.y||0)+(e.b||0)*2;});
+		let bounds=rectFor(s,pad),parent=frameParentOf(s),seen=new Set();
+		while(parent&&!seen.has(parent.id)){
+			if(parent.clipContent!==false){
+				const clip=rectFor(parent);
+				bounds={x:Math.max(bounds.x,clip.x),y:Math.max(bounds.y,clip.y),x2:Math.min(bounds.x2,clip.x2),y2:Math.min(bounds.y2,clip.y2)};
+				if(bounds.x2<bounds.x||bounds.y2<bounds.y)return;
+			}
+			seen.add(parent.id);parent=frameParentOf(parent);
+		}
+		pts.push([bounds.x,bounds.y],[bounds.x2,bounds.y2]);
+	});
+	if(!pts.length)return {x:0,y:0,w:1,h:1};
+	const x=Math.min(...pts.map(p=>p[0])),y=Math.min(...pts.map(p=>p[1]));
+	return {x,y,w:Math.max(1,Math.max(...pts.map(p=>p[0]))-x),h:Math.max(1,Math.max(...pts.map(p=>p[1]))-y)};
+}
+function exportBaseName(scope,frameId){
+	const base=(projName.replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'-')||'desain');
+	const frame=scope==='frame'?S.find(s=>s.id===+frameId):null;
+	const suffix=frame?'-'+(frame.name||'frame').replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'-'):scope==='selection'?'-seleksi':'';
+	return base+suffix;
+}
+function loadExportImages(items){
+	return Promise.all(items.filter(s=>s.type==='image').map(s=>{
+		const img=imageFor(s.src);if(!img)return Promise.reject(new Error('Gambar ekspor tidak dapat dimuat.'));
+		if(img.complete&&img.naturalWidth)return Promise.resolve();
+		return new Promise((resolve,reject)=>{img.addEventListener('load',resolve,{once:true});img.addEventListener('error',()=>reject(new Error('Gagal memuat gambar untuk ekspor.')),{once:true});});
+	}));
+}
+function exportCanvasBlob(canvas,type,quality){
+	return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Browser gagal membuat berkas ekspor.')),type,quality));
+}
+async function buildExportBlob(scope,frameId,format,scale){
+	const items=exportItems(scope,frameId);
+	if(!items.length)throw new Error(scope==='selection'?'Pilih objek terlebih dahulu untuk diekspor.':'Tidak ada objek terlihat untuk diekspor.');
+	await loadExportImages(items);
+	const b=exportBounds(items),w=Math.ceil(b.w*scale),h=Math.ceil(b.h*scale);
+	if(w>32767||h>32767||w*h>25000000)throw new Error('Ukuran ekspor terlalu besar. Pilih skala lebih kecil atau area yang lebih sempit.');
+	const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
+	const g=canvas.getContext('2d');if(!g)throw new Error('Canvas ekspor tidak tersedia.');
+	if(format!=='png'){g.fillStyle='#fff';g.fillRect(0,0,w,h);}
+	g.scale(scale,scale);g.translate(-b.x,-b.y);paintHierarchy(g,null,s=>items.includes(s));
+	if(format==='jpg')return {blob:await exportCanvasBlob(canvas,'image/jpeg',.92),extension:'jpg'};
+	if(format==='pdf'){
+		const jpeg=await exportCanvasBlob(canvas,'image/jpeg',.92),data=new Uint8Array(await jpeg.arrayBuffer()),enc=new TextEncoder(),parts=[],offsets=[0];let length=0;
+		const push=part=>{parts.push(part);length+=part.length;},text=value=>enc.encode(value);
+		push(text('%PDF-1.4\n%MiniFigma\n'));
+		const object=(id,head,stream)=>{offsets[id]=length;push(text(`${id} 0 obj\n${head}`));if(stream){push(text('\nstream\n'));push(stream);push(text('\nendstream'));}push(text('\nendobj\n'));};
+		const content=text(`q\n${w} 0 0 ${h} 0 0 cm\n/Im0 Do\nQ\n`);
+		object(1,'<< /Type /Catalog /Pages 2 0 R >>');
+		object(2,'<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+		object(3,`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${w} ${h}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>`);
+		object(4,`<< /Type /XObject /Subtype /Image /Width ${w} /Height ${h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${data.length} >>`,data);
+		object(5,`<< /Length ${content.length} >>`,content);
+		const xref=length;push(text('xref\n0 6\n0000000000 65535 f \n'));
+		for(let i=1;i<=5;i++)push(text(`${String(offsets[i]).padStart(10,'0')} 00000 n \n`));
+		push(text(`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`));
+		const bytes=new Uint8Array(length);let at=0;parts.forEach(part=>{bytes.set(part,at);at+=part.length;});
+		return {blob:new Blob([bytes],{type:'application/pdf'}),extension:'pdf'};
+	}
+	const png=await exportCanvasBlob(canvas,'image/png');
+	if(format==='png')return {blob:png,extension:'png'};
+	if(format==='svg'){
+		const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error('Gagal membaca PNG untuk SVG.'));reader.readAsDataURL(png);});
+		const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><image width="${w}" height="${h}" href="${data}"/></svg>`;
+		return {blob:new Blob([svg],{type:'image/svg+xml'}),extension:'svg'};
+	}
+	throw new Error('Format ekspor tidak dikenal.');
+}
+function downloadExport(blob,name,extension){
+	const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`${name}.${extension}`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+async function copyExportPng(){
+	if(!navigator.clipboard||!window.ClipboardItem)throw new Error('Clipboard gambar tidak didukung browser ini atau halaman bukan konteks aman.');
+	const scope=selAll().length?'selection':'all',result=await buildExportBlob(scope,0,'png',1);
+	await navigator.clipboard.write([new ClipboardItem({'image/png':result.blob})]);
+}
 MF.init.push(function initSaving(){
 	MF.keys.push((e,k)=>{if((e.ctrlKey||e.metaKey)&&k==='s'){e.preventDefault();$('#jsave').trigger('click');return true;}return false;});
 	$('#jsave').on('click',()=>{
@@ -180,10 +288,23 @@ MF.init.push(function initSaving(){
 	});
 	$('#pname').on('input',()=>{projName=$('#pname').val();save();});
 	$('#exp').on('click',()=>{
-		const E=S.filter(s=>s.exp!==false&&!frameEffectivelyHidden(s));if(!E.length)return;let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
-		E.forEach(s=>{const b=bbox(s),strokePad=getPaintLayers(s,'stroke').reduce((m,p)=>Math.max(m,(+p.weight||0)*(p.startArrow!=='none'||p.endArrow!=='none'?4:p.position==='center'?.5:1)),s.sw/2),p=strokePad+(s.fx||[]).reduce((m,e)=>Math.max(m,Math.abs(e.x||0)+Math.abs(e.y||0)+(e.b||0)*2),0);
-			[[b.x,b.y],[b.x+b.w,b.y],[b.x+b.w,b.y+b.h],[b.x,b.y+b.h]].forEach(q=>{const r=rp(s,q[0],q[1]);x0=Math.min(x0,r[0]-p);y0=Math.min(y0,r[1]-p);x1=Math.max(x1,r[0]+p);y1=Math.max(y1,r[1]+p);});});
-		const c=document.createElement('canvas');c.width=Math.ceil(x1-x0);c.height=Math.ceil(y1-y0);const g=c.getContext('2d');g.translate(-x0,-y0);paintHierarchy(g,null,s=>E.includes(s));
-		$('<a>').attr({href:c.toDataURL('image/png'),download:'desain.png'})[0].click();
+		const frames=S.filter(s=>s.type==='frame'&&!frameEffectivelyHidden(s)),$frame=$('#exportFrame').empty();
+		frames.forEach(s=>$frame.append($('<option>').val(s.id).text(`${s.name} · ${Math.round(s.w)} × ${Math.round(s.h)}`)));
+		$('#exportScope option[value="frame"]').prop('disabled',!frames.length);
+		$('#exportScope').val(selAll().length?'selection':'all');$('#exportFrameRow').toggleClass('hidden',$('#exportScope').val()!=='frame');
+		$('#exportScale').val('1');$('#exportFormat').val('png');
+		$('#exportdlg')[0].showModal();
 	});
+	$('#exportScope').on('change',function(){$('#exportFrameRow').toggleClass('hidden',this.value!=='frame');});
+	$('#exportclose,#exportcancel').on('click',()=>$('#exportdlg')[0].close());
+	$('#exportform').on('submit',async e=>{
+		e.preventDefault();const $button=$('#exportconfirm');$button.prop('disabled',true).text('Mengekspor…');
+		try{
+			const scope=$('#exportScope').val(),format=$('#exportFormat').val(),scale=+$('#exportScale').val(),frameId=$('#exportFrame').val();
+			const result=await buildExportBlob(scope,frameId,format,scale);downloadExport(result.blob,exportBaseName(scope,frameId),result.extension);
+			$('#exportdlg')[0].close();note(`Ekspor ${result.extension.toUpperCase()} selesai (${scale}×).`);
+		}catch(err){note('Ekspor gagal: '+err.message);}
+		finally{$button.prop('disabled',false).text('Ekspor');}
+	});
+	$('#expcopy').on('click',async()=>{try{await copyExportPng();note('PNG berhasil disalin ke clipboard.');}catch(err){note('Gagal menyalin PNG: '+err.message);}});
 });

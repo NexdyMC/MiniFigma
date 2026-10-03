@@ -59,7 +59,7 @@ function paintCard(kind,index,p){
 	return `<div class="rounded bg-[#383838] p-2 space-y-2" data-kind="${kind}" data-index="${index}">
 		<div class="flex items-center justify-between"><span class="text-neutral-300">${stroke?'Garis':'Isi'} ${index+1}</span><div class="flex items-center">${actions}</div></div>
 		<div class="flex items-center gap-1"><span data-start-label class="w-14 shrink-0 text-neutral-400">${gradient?'Awal · 0%':'Warna'}</span><input data-k="color" type="color" value="${color}" aria-label="Warna awal ${stroke?'garis':'isi'}"><input data-k="hex" value="${color}" maxlength="7" class="num !w-[72px] uppercase" aria-label="Kode warna awal"></div>
-		<div class="flex items-center gap-2"><span class="text-neutral-400 w-8">Opasitas</span><input data-k="opacity" type="range" min="0" max="100" value="${cl(p.opacity,0,100,100)}" class="flex-1 accent-[#0d99ff]"><span data-value="opacity" class="w-8 text-right">${cl(p.opacity,0,100,100)}%</span></div>
+		<div class="grid items-center gap-2"><span class="text-neutral-400 w-8">Opasitas</span><input data-k="opacity" type="range" min="0" max="100" value="${cl(p.opacity,0,100,100)}" class="flex-1 accent-[#0d99ff]"><span data-value="opacity" class="w-8 text-right">${cl(p.opacity,0,100,100)}%</span></div>
 		<label class="flex items-center gap-2"><span class="text-neutral-400 w-8">${stroke?'Jenis':'Isi'}</span><select data-k="type" class="num flex-1">${gradients}</select></label>
 		<div data-gradient class="${gradient?'':'hidden'} space-y-2">
 			<div data-gradient-preview role="img" aria-label="Pratinjau gradien" class="h-7 rounded border border-white/20" style="${gradient?`background:${gradientPreview(p)}`:''}"></div>

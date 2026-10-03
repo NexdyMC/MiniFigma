@@ -7,6 +7,69 @@ const ic=(v,p)=>{
 const each=fn=>{selAll().forEach(fn);draw();save();};
 const one=fn=>()=>{if(sel){fn(sel);draw();save();}};
 const hex=v=>{v=(v||'').trim();if(v[0]!=='#')v='#'+v;return /^#[0-9a-f]{6}$/i.test(v)?v.toLowerCase():null;};
+const PALETTE_KEY='minifigma.palette',MAX_PALETTE=24;
+let colorPick=null;
+function basePaint(kind,color){
+	return kind==='fill'?{type:'solid',color:color||'#d9d9d9',color2:'#ffffff',angle:0,opacity:100,visible:true}:
+		{type:'solid',color:color||'#d9d9d9',color2:'#ffffff',angle:0,opacity:100,visible:true,weight:1,position:'center',dash:'solid',cap:'butt',join:'round',startArrow:'none',endArrow:'none'};
+}
+function setPaintValue(kind,index,key,value){
+	const selected=selAll(),source=selected.length?getPaintLayers(selected[0],kind)[index]:null,template=source||basePaint(kind);
+	selected.forEach(s=>{
+		const layers=ensurePaintLayers(s,kind);
+		while(layers.length<=index)layers.push({...template});
+		layers[index][key]=value;syncLegacyPaint(s,kind);
+	});
+	draw();save();
+}
+function addPaint(kind){
+	const selected=selAll();if(!selected.length)return;
+	selected.forEach(s=>{
+		const layers=ensurePaintLayers(s,kind),first=layers[0],p=first?{...basePaint(kind,first.color),...first,type:'solid',visible:true,opacity:100}:basePaint(kind,kind==='fill'?s.fill:s.stroke);
+		if(kind==='stroke')p.weight=p.weight||1;
+		layers.push(p);syncLegacyPaint(s,kind);
+	});refresh();save();
+}
+function removePaint(kind,index){
+	selAll().forEach(s=>{const a=ensurePaintLayers(s,kind);a.splice(index,1);syncLegacyPaint(s,kind);});refresh();save();
+}
+function paintCard(kind,index,p){
+	const stroke=kind==='stroke',gradient=p.type!=='solid',color=hex(p.color)||'#d9d9d9';
+	const actions=`<button type="button" data-action="pick" class="p-1 rounded hover:bg-neutral-600" title="Pipet warna" aria-label="Pipet warna">${FAIcon('dropper')}</button><button type="button" data-action="visible" class="p-1 rounded hover:bg-neutral-600" title="${p.visible===false?'Tampilkan':'Sembunyikan'}" aria-label="${p.visible===false?'Tampilkan':'Sembunyikan'}">${FAIcon(p.visible===false?'eyeSlash':'eye')}</button><button type="button" data-action="delete" class="p-1 rounded hover:bg-neutral-600" title="Hapus lapisan" aria-label="Hapus lapisan">${FAIcon('trash')}</button>`;
+	const gradients='<option value="solid">Solid</option><option value="linear">Linear</option><option value="radial">Radial</option><option value="angular">Angular</option>';
+	return `<div class="rounded bg-[#383838] p-2 space-y-2" data-kind="${kind}" data-index="${index}">
+		<div class="flex items-center gap-1"><input data-k="color" type="color" value="${color}" aria-label="Warna ${stroke?'garis':'isi'}"><input data-k="hex" value="${color}" maxlength="7" class="num !w-[72px] uppercase" aria-label="Kode warna">${actions}</div>
+		<div class="flex items-center gap-2"><span class="text-neutral-400 w-8">Opasitas</span><input data-k="opacity" type="range" min="0" max="100" value="${cl(p.opacity,0,100,100)}" class="flex-1 accent-[#0d99ff]"><span data-value="opacity" class="w-8 text-right">${cl(p.opacity,0,100,100)}%</span></div>
+		<label class="flex items-center gap-2"><span class="text-neutral-400 w-8">${stroke?'Jenis':'Isi'}</span><select data-k="type" class="num flex-1">${gradients}</select></label>
+		<div data-gradient class="${gradient?'':'hidden'} space-y-2"><div class="flex items-center gap-1"><input data-k="color2" type="color" value="${hex(p.color2)||'#ffffff'}" aria-label="Warna akhir gradien"><input data-k="hex2" value="${hex(p.color2)||'#ffffff'}" maxlength="7" class="num !w-[72px] uppercase" aria-label="Kode warna akhir"><label class="flex-1">Sudut °<input data-k="angle" type="number" min="0" max="360" class="num" value="${cl(p.angle,0,360,0)}"></label></div></div>
+		${stroke?`<div class="grid grid-cols-2 gap-2"><label>Berat<input data-k="weight" type="number" min="0.1" max="200" step="0.5" class="num" value="${cl(p.weight,.1,200,1)}"></label><label>Posisi<select data-k="position" class="num"><option value="center">Tengah</option><option value="inside">Dalam</option><option value="outside">Luar</option></select></label><label>Garis<select data-k="dash" class="num"><option value="solid">Solid</option><option value="dash">Putus</option><option value="dot">Titik</option><option value="dashDot">Garis-titik</option></select></label><label>Ujung<select data-k="cap" class="num"><option value="butt">Rata</option><option value="round">Bulat</option><option value="square">Kotak</option></select></label><label>Sambungan<select data-k="join" class="num"><option value="round">Bulat</option><option value="miter">Tajam</option><option value="bevel">Miring</option></select></label><label>Awal<select data-k="startArrow" class="num"><option value="none">Tanpa panah</option><option value="arrow">Panah</option><option value="triangle">Segitiga</option><option value="line">Terbuka</option><option value="circle">Lingkaran</option><option value="square">Kotak</option><option value="diamond">Wajik</option></select></label><label class="col-span-2">Akhir<select data-k="endArrow" class="num"><option value="none">Tanpa panah</option><option value="arrow">Panah</option><option value="triangle">Segitiga</option><option value="line">Terbuka</option><option value="circle">Lingkaran</option><option value="square">Kotak</option><option value="diamond">Wajik</option></select></label></div>`:''}
+	</div>`;
+}
+function renderPaint(kind){
+	const selected=selAll(),layers=selected.length?getPaintLayers(selected[0],kind):[];
+	const $list=$(kind==='fill'?'#frow':'#srow').empty();
+	layers.forEach((p,i)=>$list.append(paintCard(kind,i,p)));
+	$list.find('[data-k="type"]').each(function(){const p=layers[+$(this).closest('[data-index]').attr('data-index')];$(this).val(['solid','linear','radial','angular'].includes(p.type)?p.type:'solid');});
+	$list.find('[data-k="position"]').each(function(){const p=layers[+$(this).closest('[data-index]').attr('data-index')];$(this).val(['center','inside','outside'].includes(p.position)?p.position:'center');});
+	$list.find('[data-k="dash"]').each(function(){const p=layers[+$(this).closest('[data-index]').attr('data-index')];$(this).val(['solid','dash','dot','dashDot'].includes(p.dash)?p.dash:'solid');});
+	$list.find('[data-k="cap"]').each(function(){const p=layers[+$(this).closest('[data-index]').attr('data-index')];$(this).val(['butt','round','square'].includes(p.cap)?p.cap:'butt');});
+	$list.find('[data-k="join"]').each(function(){const p=layers[+$(this).closest('[data-index]').attr('data-index')];$(this).val(['miter','round','bevel'].includes(p.join)?p.join:'round');});
+	['startArrow','endArrow'].forEach(k=>$list.find(`[data-k="${k}"]`).each(function(){const p=layers[+$(this).closest('[data-index]').attr('data-index')];$(this).val(p[k]||'none');}));
+}
+function readPalette(){
+	try{const p=JSON.parse(localStorage.getItem(PALETTE_KEY)||'[]');return Array.isArray(p)?p.map(hex).filter(Boolean).slice(0,MAX_PALETTE):[];}
+	catch(e){note('Palet warna lokal tidak dapat dibaca: '+e.message);return [];}
+}
+function renderPalette(){
+	const colors=readPalette(),$list=$('#paletteList').empty();
+	colors.forEach(c=>$list.append(`<button type="button" data-color="${c}" class="w-5 h-5 rounded border border-white/20" style="background:${c}" title="${c}" aria-label="Gunakan warna ${c}"></button>`));
+}
+function savePaletteColor(){
+	const a=selAll(),p=a.length?getPaintLayers(a[0],'fill')[0]||getPaintLayers(a[0],'stroke')[0]:null,c=hex(p&&p.color);
+	if(!c){note('Pilih objek dengan warna sebelum menyimpan warna.');return;}
+	try{const colors=readPalette();localStorage.setItem(PALETTE_KEY,JSON.stringify([c,...colors.filter(x=>x!==c)].slice(0,MAX_PALETTE)));renderPalette();}
+	catch(e){note('Palet warna tidak dapat disimpan: '+e.message);}
+}
 function align(k){
 	const a=selAll();if(!a.length)return;let box;
 	if(a.length>1)box=ubox(a);else{
@@ -17,6 +80,13 @@ function align(k){
 		if(k==='l')dx=box.x-b.x;if(k==='h')dx=box.x+box.w/2-b.x-b.w/2;if(k==='r')dx=box.x+box.w-b.x-b.w;
 		if(k==='t')dy=box.y-b.y;if(k==='v')dy=box.y+box.h/2-b.y-b.h/2;if(k==='b')dy=box.y+box.h-b.y-b.h;moveWith(s,dx,dy);
 	});refresh();save();
+}
+function distribute(axis){
+	const a=selAll();if(a.length<3){note('Distribusi jarak membutuhkan minimal tiga objek terpilih.');return;}
+	const key=axis==='x'?'x':'y',size=axis==='x'?'w':'h',sorted=[...a].sort((u,v)=>bbox(u)[key]-bbox(v)[key]),first=bbox(sorted[0]),last=bbox(sorted[sorted.length-1]);
+	const total=sorted.reduce((n,s)=>n+bbox(s)[size],0),gap=(last[key]+last[size]-first[key]-total)/(sorted.length-1);let cursor=first[key];
+	sorted.forEach((s,i)=>{const b=bbox(s);if(i>0&&i<sorted.length-1)moveWith(s,axis==='x'?cursor-b.x:0,axis==='y'?cursor-b.y:0);cursor+=b[size]+gap;});
+	refresh();save();
 }
 function resizeSelectionTo(w,h){
 	const selected=selAll();if(!selected.length)return;const source=selected.length===1?[selected[0]]:selected,box=selectionBox(),sx=w/(box.w||1),sy=h/(box.h||1);
@@ -39,14 +109,16 @@ function syncProps(){
 	$('#pbm').val(s.bm||'normal');$('#fxsec').toggle(one);$('#pw').val(R(B.w)).prop('disabled',one&&t==='text'&&!s.textBox).attr({min:fixedText?100:1,max:fixedText?900:null});$('#pwlabel').text(fixedText?'Lebar kotak (100–900 px)':'Lebar');$('#ph').val(R(B.h)).prop('disabled',one&&t==='text');$('#par').prop('checked',!!s.ar).prop('disabled',!one);
 	$('#rown').toggle(one&&(t==='polygon'||t==='star'));$('#pn').val(s.n);$('#rowtxt').toggle(one&&t==='text');$('#pfs').val(s.fs);renderFontOptions(s.type==='text'?s.fontFamily:null);
 	if(one&&t==='text'){$('#pbold').toggleClass('on',(s.fontWeight??(s.bold?700:400))>=600);$('#pitalic').toggleClass('on',!!s.italic);$('#punderline').toggleClass('on',!!s.underline);$('#palign').val(s.textAlign||'left');$('#plh').val(s.lineHeight||125);$('#pls').val(s.letterSpacing||0);$('#ptextBox').prop('checked',!!s.textBox);renderFontWeightOptions(s.fontFamily,s.fontWeight??(s.bold?700:400));}
-	$('#pop').val(s.op??100);$('#peye').html(I(s.hid?'eyeoff':'eye',14));
+	$('#pop').val(s.op??100);$('#peye').html(FAIcon(s.hid?'eyeSlash':'eye'));
 	const rr=a.find(x=>x.type==='rect'||x.type==='frame');$('#rowr').toggle(!!rr);$('#rowradii').toggle(!!rr);
 	if(rr){const r=rr.radii||[rr.r,rr.r,rr.r,rr.r],uniform=r.every(v=>v===r[0]);$('#pr').val(uniform?r[0]:'');r.forEach((v,i)=>$('#pr'+i).val(v));}
-	$('#frow').toggle(!!s.fillOn);$('#pfill').val(s.fill);$('#pfhex').val(s.fill);$('#pfo').val(s.fo??100);$('#fvis').html(I(s.fv===false?'eyeoff':'eye',14));$('#pexp').prop('checked',s.exp!==false);
-	$('#srow').toggle(s.sw>0);$('#pstroke').val(s.stroke);$('#pshex').val(s.stroke);$('#pso').val(s.so??100);$('#svis').html(I(s.sv===false?'eyeoff':'eye',14));$('#psw').val(s.sw);
+	renderPaint('fill');renderPaint('stroke');renderPalette();$('#pexp').prop('checked',s.exp!==false);
 }
 MF.init.push(function initPanel(){
-	['l','h','r','t','v','b'].forEach((k,i)=>$('<button class="p-1.5 rounded bg-[#383838] hover:bg-neutral-600"></button>').html(ic(i>2?1:0,i%3)).data('k',k).on('click',function(){align($(this).data('k'));}).appendTo('#al'));
+	$('#distx').html(FAIcon('distributeH'));$('#disty').html(FAIcon('distributeV'));$('#flipx').html(FAIcon('distributeH'));$('#flipy').html(FAIcon('distributeV'));$('#fadd,#sadd').html(FAIcon('plus'));$('#savecolor').html(FAIcon('palette'));
+	const alignNames=['Rata kiri','Rata tengah horizontal','Rata kanan','Rata atas','Rata tengah vertikal','Rata bawah'];
+	['l','h','r','t','v','b'].forEach((k,i)=>$('<button type="button" class="p-1.5 rounded bg-[#383838] hover:bg-neutral-600"></button>').attr({title:alignNames[i],'aria-label':alignNames[i]}).html(ic(i>2?1:0,i%3)).data('k',k).on('click',function(){align($(this).data('k'));}).appendTo('#al'));
+	$('#distx').on('click',()=>distribute('x'));$('#disty').on('click',()=>distribute('y'));
 	$('#flipx').on('click',()=>flipSelection('x'));$('#flipy').on('click',()=>flipSelection('y'));
 	$('#px,#py').on('input',()=>{
 		const a=selAll();if(!a.length)return;const b=a.length>1?ubox(a):bbox(a[0]),nx=parseFloat($('#px').val()),ny=parseFloat($('#py').val());if(isNaN(nx)||isNaN(ny))return;
@@ -70,13 +142,36 @@ MF.init.push(function initPanel(){
 	$('#pr').on('input',()=>each(s=>{if(s.type==='rect'||s.type==='frame'){s.r=Math.max(0,+$('#pr').val()||0);s.radii=[s.r,s.r,s.r,s.r];}}));
 	$('#pr0,#pr1,#pr2,#pr3').on('input',function(){const i=+this.id.slice(2);selAll().forEach(s=>{if(s.type==='rect'||s.type==='frame'){s.radii=s.radii||[s.r,s.r,s.r,s.r];s.radii[i]=Math.max(0,+$('#pr'+i).val()||0);}});draw();save();});
 	$('#peye').on('click',()=>{const v=!selAll()[0].hid;each(s=>{s.hid=v;});refresh();});
-	$('#pfill').on('input',()=>{each(s=>{s.fill=$('#pfill').val();s.fillOn=true;s.fv=true;});syncProps();});
-	$('#pfhex').on('input',()=>{const h=hex($('#pfhex').val());if(h){each(s=>{s.fill=h;s.fillOn=true;});$('#pfill').val(h);}});
-	$('#pfo').on('input',()=>each(s=>{s.fo=cl($('#pfo').val(),0,100,100);}));
-	$('#fvis').on('click',()=>{const v=selAll()[0].fv===false;each(s=>{s.fv=v;});syncProps();});$('#fdel').on('click',()=>{each(s=>{s.fillOn=false;});syncProps();});$('#fadd').on('click',()=>{each(s=>{s.fillOn=true;s.fv=true;});syncProps();});
+	$('#fadd').on('click',()=>addPaint('fill'));$('#sadd').on('click',()=>addPaint('stroke'));$('#savecolor').on('click',savePaletteColor);
+	$('#frow,#srow').on('input change','[data-k]',function(e){
+		const $input=$(this),$card=$input.closest('[data-kind]'),kind=$card.attr('data-kind'),index=+$card.attr('data-index'),key=$input.attr('data-k');
+		if(key==='hex'||key==='hex2'){
+			const h=hex($input.val());if(!h){if(e.type==='change')note('Kode warna tidak valid. Gunakan format #RRGGBB.');return;}const target=key==='hex'?'color':'color2';$card.find(`[data-k="${target}"]`).val(h);setPaintValue(kind,index,target,h);return;
+		}
+		if(key==='color'||key==='color2'){const h=hex($input.val());if(h){$card.find(`[data-k="${key==='color'?'hex':'hex2'}"]`).val(h);setPaintValue(kind,index,key,h);}return;}
+		const value=key==='opacity'||key==='weight'||key==='angle'?cl($input.val(),key==='weight'?.1:0,key==='weight'?200:360,key==='weight'?1:100):$input.val();
+		if(key==='type')$card.find('[data-gradient]').toggleClass('hidden',value==='solid');
+		if(key==='opacity')$card.find('[data-value="opacity"]').text(value+'%');
+		setPaintValue(kind,index,key,value);
+	});
+	$('#frow,#srow').on('click','[data-action]',function(){
+		const $card=$(this).closest('[data-kind]'),kind=$card.attr('data-kind'),index=+$card.attr('data-index'),action=$(this).attr('data-action'),p=getPaintLayers(selAll()[0],kind)[index];
+		if(action==='delete'){removePaint(kind,index);return;}
+		if(action==='visible'){setPaintValue(kind,index,'visible',p.visible===false);refresh();return;}
+		colorPick={kind,index};note('Pipet aktif — klik warna di kanvas untuk mengambilnya.');
+	});
+	let paletteTarget={kind:'fill',index:0};
+	$('#frow,#srow').on('focusin','[data-k]',function(){const $c=$(this).closest('[data-kind]');paletteTarget={kind:$c.attr('data-kind'),index:+$c.attr('data-index')};});
+	$('#paletteList').on('click','[data-color]',function(){setPaintValue(paletteTarget.kind,paletteTarget.index,'color',$(this).attr('data-color'));refresh();});
+	MF.down.push({p:1,fn:(e,c)=>{
+		if(!colorPick)return false;
+		try{
+			const d=ctx.getImageData(Math.floor(c.sx*dpr),Math.floor(c.sy*dpr),1,1).data;
+			if(d[3]===0){note('Piksel yang dipilih transparan; pilih warna lain.');return true;}
+			const color='#'+[d[0],d[1],d[2]].map(v=>v.toString(16).padStart(2,'0')).join(''),pick=colorPick;colorPick=null;
+			setPaintValue(pick.kind,pick.index,'color',color);refresh();note('Warna diambil: '+color);
+		}catch(e){colorPick=null;note('Tidak dapat mengambil warna dari kanvas: '+e.message);}
+		return true;
+	}});
 	$('#pexp').on('change',()=>each(s=>{s.exp=chk('#pexp');}));
-	$('#pstroke').on('input',()=>{each(s=>{s.stroke=$('#pstroke').val();if(!s.sw)s.sw=1;s.sv=true;});syncProps();});
-	$('#pshex').on('input',()=>{const h=hex($('#pshex').val());if(h){each(s=>{s.stroke=h;if(!s.sw)s.sw=1;});$('#pstroke').val(h);}});
-	$('#pso').on('input',()=>each(s=>{s.so=cl($('#pso').val(),0,100,100);}));$('#psw').on('input',()=>each(s=>{s.sw=cl($('#psw').val(),.1,200,1);}));
-	$('#svis').on('click',()=>{const v=selAll()[0].sv===false;each(s=>{s.sv=v;});syncProps();});$('#sdel').on('click',()=>{each(s=>{s.sw=0;});syncProps();});$('#sadd').on('click',()=>{each(s=>{if(!s.sw)s.sw=1;s.sv=true;});syncProps();});
 });

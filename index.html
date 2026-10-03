@@ -74,7 +74,9 @@
         <div class="font-semibold">Posisi</div>
         <div class="text-neutral-400">Sejajarkan</div>
         <div id="al" class="flex gap-1"></div>
-        <div class="flex gap-1"><button id="flipx" class="px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Balik H</button><button id="flipy" class="px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Balik V</button></div>
+        <div class="text-neutral-400">Distribusikan jarak (pilih ≥ 3 objek)</div>
+        <div class="flex gap-1"><button id="distx" type="button" class="p-1.5 rounded bg-[#383838] hover:bg-neutral-600" title="Distribusikan horizontal" aria-label="Distribusikan horizontal"></button><button id="disty" type="button" class="p-1.5 rounded bg-[#383838] hover:bg-neutral-600" title="Distribusikan vertikal" aria-label="Distribusikan vertikal"></button></div>
+        <div class="flex gap-1"><button id="flipx" type="button" class="p-1.5 rounded bg-[#383838] hover:bg-neutral-600" title="Balik horizontal" aria-label="Balik horizontal"></button><button id="flipy" type="button" class="p-1.5 rounded bg-[#383838] hover:bg-neutral-600" title="Balik vertikal" aria-label="Balik vertikal"></button></div>
         <div class="grid grid-cols-2 gap-2">
           <label>X<input id="px" type="number" class="num"></label>
           <label>Y<input id="py" type="number" class="num"></label>
@@ -124,20 +126,17 @@
         </div>
       </div>
       <div class="p-3 border-b border-neutral-700">
-        <div class="flex items-center justify-between font-semibold mb-2"><span>Isi</span><button id="fadd" data-i="plus" class="px-1.5 rounded hover:bg-neutral-600"></button></div>
-        <div id="frow" class="space-y-2">
-          <div class="flex items-center gap-1.5"><input id="pfill" type="color"><input id="pfhex" maxlength="7" class="num !w-[72px] uppercase"><input id="pfo" type="number" min="0" max="100" class="num !w-12"><span>%</span>
-            <button id="fvis" data-i="eye" class="px-1 rounded hover:bg-neutral-600"></button><button id="fdel" data-i="minus" class="px-1 rounded hover:bg-neutral-600"></button></div>
-          <label class="flex items-center gap-2"><input id="pexp" type="checkbox" checked>Tampil di ekspor</label>
-        </div>
+        <div class="flex items-center justify-between font-semibold mb-2"><span>Isi</span><button id="fadd" type="button" class="p-1.5 rounded hover:bg-neutral-600" title="Tambah isi" aria-label="Tambah isi"></button></div>
+        <div id="frow" class="space-y-2"></div>
+        <label class="flex items-center gap-2 mt-2"><input id="pexp" type="checkbox" checked>Tampil di ekspor</label>
       </div>
       <div class="p-3 border-b border-neutral-700">
-        <div class="flex items-center justify-between font-semibold mb-2"><span>Garis</span><button id="sadd" data-i="plus" class="px-1.5 rounded hover:bg-neutral-600"></button></div>
-        <div id="srow" class="space-y-2">
-          <div class="flex items-center gap-1.5"><input id="pstroke" type="color"><input id="pshex" maxlength="7" class="num !w-[72px] uppercase"><input id="pso" type="number" min="0" max="100" class="num !w-12"><span>%</span>
-            <button id="svis" data-i="eye" class="px-1 rounded hover:bg-neutral-600"></button><button id="sdel" data-i="minus" class="px-1 rounded hover:bg-neutral-600"></button></div>
-          <label class="flex items-center gap-2">Berat<input id="psw" type="number" min="0.1" step="0.5" class="num !w-16"></label>
-        </div>
+        <div class="flex items-center justify-between font-semibold mb-2"><span>Garis</span><button id="sadd" type="button" class="p-1.5 rounded hover:bg-neutral-600" title="Tambah garis" aria-label="Tambah garis"></button></div>
+        <div id="srow" class="space-y-2"></div>
+      </div>
+      <div class="p-3 border-b border-neutral-700">
+        <div class="flex items-center justify-between font-semibold mb-2"><span>Palet warna</span><button id="savecolor" type="button" class="p-1.5 rounded hover:bg-neutral-600" title="Simpan warna terpilih" aria-label="Simpan warna terpilih"></button></div>
+        <div id="paletteList" class="flex flex-wrap gap-1.5"></div>
       </div>
       <div id="fxsec" class="p-3">
         <div class="flex items-center justify-between font-semibold mb-2"><span>Efek</span><button id="fxadd" data-i="plus" class="px-1.5 rounded hover:bg-neutral-600" title="Tambah efek"></button></div>

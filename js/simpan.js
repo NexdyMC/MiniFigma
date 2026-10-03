@@ -1,12 +1,12 @@
-/* [6.9] Simpan dan ekspor. Isi: JSON v7, migrasi, buka/simpan proyek, ekspor PNG. Bukan di sini: riwayat atau autosave. */
-const FMT_VERSION=7,LS_KEY='minifigma.project',IMG_KEY='minifigma.images',MAX_IMAGE=1024*1024,MAX_IMAGE_TOTAL=1400*1024;
+/* [6.9] Simpan dan ekspor. Isi: JSON v8, migrasi, buka/simpan proyek, ekspor PNG. Bukan di sini: riwayat atau autosave. */
+const FMT_VERSION=8,LS_KEY='minifigma.project',IMG_KEY='minifigma.images',MAX_IMAGE=1024*1024,MAX_IMAGE_TOTAL=1400*1024;
 let projName='Tanpa judul';
 const rd=v=>Math.round(v*100)/100;
 const num=(v,d)=>(v===null||v===undefined||v===''||!isFinite(+v))?d:+v;
 const pct=(v,d=100)=>Math.min(100,Math.max(0,num(v,d)));
 const col=(v,d)=>{if(typeof v!=='string')return d;v=v.trim();if(/^#[0-9a-f]{3}$/i.test(v))v='#'+[...v.slice(1)].map(c=>c+c).join('');return /^#[0-9a-f]{6}$/i.test(v)?v.toLowerCase():d;};
 const T_OUT={rect:'rectangle',path:'vector'};
-const MIGRATE={1:d=>d,2:d=>d,3:d=>d,4:d=>d,5:d=>d,6:d=>d};
+const MIGRATE={1:d=>d,2:d=>d,3:d=>d,4:d=>d,5:d=>d,6:d=>d,7:d=>d};
 function migrate(d){let v=Math.floor(num(d.version,1));d={...d};while(v<FMT_VERSION){if(MIGRATE[v])d=MIGRATE[v](d);v++;}d.version=FMT_VERSION;return d;}
 function tree(L,g){
 	const out=[],seen=new Set();
@@ -21,6 +21,18 @@ function tree(L,g){
 	return out;
 }
 function serFx(e){const d=EFX[e.t],o={type:e.t,visible:e.on!==false};d.p.forEach(p=>{o[JK[p[0]]]=e[p[0]];});if(d.c){o.color=e.c;o.opacity=e.o;}return o;}
+function serPaint(p,kind){
+	const o={type:['solid','linear','radial','angular'].includes(p.type)?p.type:'solid',color:col(p.color,'#d9d9d9'),opacity:pct(p.opacity),visible:p.visible!==false};
+	if(o.type!=='solid'){o.color2=col(p.color2,o.color);o.angle=num(p.angle,0);}
+	if(kind==='stroke')Object.assign(o,{weight:Math.max(.1,num(p.weight,1)),position:['center','inside','outside'].includes(p.position)?p.position:'center',dash:['solid','dash','dot','dashDot'].includes(p.dash)?p.dash:'solid',cap:['butt','round','square'].includes(p.cap)?p.cap:'butt',join:['miter','round','bevel'].includes(p.join)?p.join:'round',startArrow:['none','arrow','triangle','line','circle','square','diamond'].includes(p.startArrow)?p.startArrow:'none',endArrow:['none','arrow','triangle','line','circle','square','diamond'].includes(p.endArrow)?p.endArrow:'none'});
+	return o;
+}
+function desPaint(p,kind,fallback){
+	p=p&&typeof p==='object'?p:{};const type=['solid','linear','radial','angular'].includes(p.type)?p.type:'solid',o={type,color:col(p.color,fallback),opacity:pct(p.opacity),visible:p.visible!==false};
+	if(type!=='solid'){o.color2=col(p.color2,o.color);o.angle=num(p.angle,0);}
+	if(kind==='stroke')Object.assign(o,{weight:Math.max(.1,num(p.weight,1)),position:['center','inside','outside'].includes(p.position)?p.position:'center',dash:['solid','dash','dot','dashDot'].includes(p.dash)?p.dash:'solid',cap:['butt','round','square'].includes(p.cap)?p.cap:'butt',join:['miter','round','bevel'].includes(p.join)?p.join:'round',startArrow:['none','arrow','triangle','line','circle','square','diamond'].includes(p.startArrow)?p.startArrow:'none',endArrow:['none','arrow','triangle','line','circle','square','diamond'].includes(p.endArrow)?p.endArrow:'none'});
+	return o;
+}
 function desFx(o){
 	const d=EFX[o&&o.type];if(!d)return null;const e=newFx(o.type);d.p.forEach(p=>{e[p[0]]=num(o[JK[p[0]]],e[p[0]]);});if(d.c){e.c=col(o.color,e.c);e.o=pct(o.opacity,e.o);}e.on=o.visible!==false;return e;
 }
@@ -33,6 +45,8 @@ function ser(s){
 		appearance:{opacity:s.op??100,corner_radius:s.r||0,blend_mode:s.bm||'normal',flip_horizontal:!!s.flipX,flip_vertical:!!s.flipY},
 		fill:{enabled:!!s.fillOn,color:s.fill,opacity:s.fo??100,visible:s.fv!==false},
 		stroke:{enabled:sw>0,color:s.stroke,opacity:s.so??100,visible:s.sv!==false,position:'center',weight:sw,border_weight:{top:sw,right:sw,bottom:sw,left:sw}},
+		fills:getPaintLayers(s,'fill').map(p=>serPaint(p,'fill')),
+		strokes:getPaintLayers(s,'stroke').map(p=>serPaint(p,'stroke')),
 		export:{visible:s.exp!==false},effects:(s.fx||[]).map(serFx)
 	};
 	if(s.type==='polygon')st.polygon={sides:s.n};if(s.type==='star')st.star={points:s.n};
@@ -52,6 +66,8 @@ function des(l){
 	const pvo=pos.pivot||{};s.pvx=num(pvo.x,.5);s.pvy=num(pvo.y,.5);s.bm=BM.includes(ap.blend_mode)?ap.blend_mode:'normal';s.fx=(Array.isArray(st.effects)?st.effects:[]).map(desFx).filter(Boolean);
 	if(f.enabled!==undefined)s.fillOn=!!f.enabled;s.fill=col(f.color,s.fill);s.fo=pct(f.opacity);s.fv=f.visible!==false;
 	const wt=num(sk.weight,num(sk.border_weight&&sk.border_weight.top,s.sw));s.sw=sk.enabled===false?0:Math.max(0,wt);s.stroke=col(sk.color,s.stroke);s.so=pct(sk.opacity);s.sv=sk.visible!==false;
+	if(Array.isArray(st.fills)){s.fills=st.fills.map(p=>desPaint(p,'fill',s.fill));syncLegacyPaint(s,'fill');}
+	if(Array.isArray(st.strokes)){s.strokes=st.strokes.map(p=>desPaint(p,'stroke',s.stroke));syncLegacyPaint(s,'stroke');}
 	s.hid=l.visible===false;s.lock=!!l.locked;if(st.export&&st.export.visible===false)s.exp=false;
 	if(typeof l.name==='string'&&l.name.trim())s.name=l.name.trim().slice(0,80);
 	if(type==='polygon')s.n=Math.round(Math.min(20,Math.max(3,num(st.polygon&&st.polygon.sides,3))));
@@ -115,7 +131,7 @@ MF.init.push(function initSaving(){
 	$('#pname').on('input',()=>{projName=$('#pname').val();save();});
 	$('#exp').on('click',()=>{
 		const E=S.filter(s=>s.exp!==false&&!s.hid);if(!E.length)return;let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
-		E.forEach(s=>{const b=bbox(s),p=s.sw/2+(s.fx||[]).reduce((m,e)=>Math.max(m,Math.abs(e.x||0)+Math.abs(e.y||0)+(e.b||0)*2),0);
+		E.forEach(s=>{const b=bbox(s),strokePad=getPaintLayers(s,'stroke').reduce((m,p)=>Math.max(m,(+p.weight||0)*(p.startArrow!=='none'||p.endArrow!=='none'?4:p.position==='center'?.5:1)),s.sw/2),p=strokePad+(s.fx||[]).reduce((m,e)=>Math.max(m,Math.abs(e.x||0)+Math.abs(e.y||0)+(e.b||0)*2),0);
 			[[b.x,b.y],[b.x+b.w,b.y],[b.x+b.w,b.y+b.h],[b.x,b.y+b.h]].forEach(q=>{const r=rp(s,q[0],q[1]);x0=Math.min(x0,r[0]-p);y0=Math.min(y0,r[1]-p);x1=Math.max(x1,r[0]+p);y1=Math.max(y1,r[1]+p);});});
 		const c=document.createElement('canvas');c.width=Math.ceil(x1-x0);c.height=Math.ceil(y1-y0);const g=c.getContext('2d');g.translate(-x0,-y0);E.forEach(s=>paint(g,s));
 		$('<a>').attr({href:c.toDataURL('image/png'),download:'desain.png'})[0].click();

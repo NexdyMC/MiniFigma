@@ -136,8 +136,9 @@ Setiap objek di `S` dibuat oleh `mk(type,x,y)`:
 | `pts` | Titik jalur: `{x, y, ho?, hi?}`. `ho` dan `hi` = handle Bézier (offset relatif terhadap titik) |
 | `closed` | Jalur tertutup atau tidak |
 | `text`, `fs` | Isi dan ukuran font (teks) |
-| `fillOn`, `fill`, `fo`, `fv` | Isi aktif, warna hex, opasitas isi (%), isi terlihat |
-| `stroke`, `sw`, `so`, `sv` | Warna garis, berat, opasitas garis (%), garis terlihat |
+| `fills`, `strokes` | Lapisan isi dan garis; mendukung warna/gradien, opasitas, visibilitas, serta opsi garis |
+| `fillOn`, `fill`, `fo`, `fv` | Properti kompatibilitas untuk isi utama dan dokumen lama |
+| `stroke`, `sw`, `so`, `sv` | Properti kompatibilitas untuk garis utama dan dokumen lama |
 | `op` | Opasitas objek (%) |
 | `bm` | Blend mode |
 | `fx` | Array efek `{t, on, x, y, b, v, c, o}` |
@@ -150,12 +151,12 @@ Garis (line tool) disimpan sebagai `path` dengan 2 titik tanpa handle.
 
 ---
 
-## 5. Format file JSON (versi 7)
+## 5. Format file JSON (versi 8)
 
 ```json
 {
   "app": "MiniFigma",
-  "version": 7,
+  "version": 8,
   "name": "Tanpa judul",
   "view": { "x": 200, "y": 120, "zoom": 1 },
   "settings": { "grid": true, "snap_grid": true, "snap_objects": true },
@@ -168,8 +169,12 @@ Garis (line tool) disimpan sebagai `path` dengan 2 titik tanpa handle.
         "layout":     { "width": 100, "height": 100, "aspect_ratio": false },
         "appearance": { "opacity": 100, "corner_radius": 0, "blend_mode": "normal" },
         "fill":       { "enabled": true, "color": "#d9d9d9", "opacity": 100, "visible": true },
+        "fills":      [ { "type": "solid", "color": "#d9d9d9", "opacity": 100, "visible": true } ],
         "stroke":     { "enabled": false, "color": "#d9d9d9", "opacity": 100, "visible": true,
                         "position": "center", "weight": 0 },
+        "strokes":    [ { "type": "solid", "color": "#222222", "opacity": 100, "visible": true,
+                         "weight": 1, "position": "center", "dash": "solid", "cap": "butt",
+                         "join": "round", "startArrow": "none", "endArrow": "none" } ],
         "export":     { "visible": true },
         "effects":    [ { "type": "drop_shadow", "visible": true, "x": 0, "y": 4, "blur": 8,
                           "color": "#000000", "opacity": 25 } ]
@@ -182,12 +187,14 @@ Garis (line tool) disimpan sebagai `path` dengan 2 titik tanpa handle.
 ```
 
 - `layers` diurutkan dari paling **belakang** (indeks 0) ke paling depan.
+- `setting.fills[]` mendukung `solid`, `linear`, `radial`, `angular` (`color`, `color2`, `angle`); `setting.strokes[]` menambahkan `weight`, `position`, `dash`, `cap`, `join`, `startArrow`, dan `endArrow`.
 - Tipe di JSON: `frame`, `rectangle`, `ellipse`, `polygon`, `star`, `text`, `line`, `vector`, `group`.
 - Properti khusus: `setting.polygon.sides`, `setting.star.points`, `setting.text.{content,font_size,font_family,bold,italic,underline,alignment,line_height,letter_spacing,fixed_width}`, `setting.path.{closed, points[]}`.
 - Titik `vector` disimpan relatif terhadap `position`; `handle_in` dan `handle_out` untuk Bézier.
-- Riwayat versi: v1 (dasar) → v2 (pivot, blend mode, efek) → v3 (grup, handle Bézier) → v4 (bitmap) → v5 (flip/radius sudut) → v6 (font teks) → v7 (layout dan gaya teks).
+- Riwayat versi: v1 (dasar) → v2 (pivot, blend mode, efek) → v3 (grup, handle Bézier) → v4 (bitmap) → v5 (flip/radius sudut) → v6 (font teks) → v7 (layout dan gaya teks) → v8 (lapisan isi/garis dan opsi stroke; v7 tetap diimpor).
 - **Jika format berubah:** naikkan `FMT_VERSION`, tambahkan fungsi di objek `MIGRATE`, dan isi nilai default saat impor di `des()`.
 - Autosave: kunci localStorage `minifigma.project`.
+- Palet warna tersimpan: localStorage `minifigma.palette` (maksimal 24 warna).
 - Font TTF kustom disimpan terpisah di localStorage `minifigma.fonts`; file font tidak disertakan dalam ekspor JSON.
 
 ---
@@ -267,17 +274,16 @@ Legenda: `[x]` sudah lengkap · `[~]` ada tapi terbatas · `[ ]` belum ada
 ### 6.6 Panel properti
 - [x] Sejajarkan (6 tombol), relatif ke frame atau antar objek terpilih
 - [x] Opasitas, radius, blend mode (16 mode), tampil/sembunyi
-- [x] Isi: warna, hex, opasitas, tampil/sembunyi, tambah/hapus
-- [x] Garis: warna, hex, opasitas, berat, tampil/sembunyi, tambah/hapus
+- [x] Isi berlapis: warna, hex, opasitas, tampil/sembunyi, tambah/hapus
+- [x] Garis berlapis: warna, hex, opasitas, berat, tampil/sembunyi, tambah/hapus
 - [x] Opsi "Tampil di ekspor"
 - [x] Edit beberapa objek sekaligus (warna, opasitas, dll.)
-- [ ] Isi hanya satu warna solid per objek
-- [ ] Garis hanya posisi tengah (belum inside/outside)
-- [ ] Gradien (linear, radial, angular)
-- [ ] Banyak lapisan isi dan garis
-- [ ] Garis putus-putus, ujung garis (cap), sambungan (join) kustom, panah
-- [ ] Pipet warna (eyedropper), palet warna / style tersimpan
-- [ ] Distribusi jarak otomatis (distribute)
+- [x] Isi solid dan gradien linear, radial, angular
+- [x] Posisi garis tengah, dalam, dan luar
+- [x] Garis putus-putus, ujung (cap), sambungan (join), dan panah
+- [x] Pipet warna di kanvas dan palet warna tersimpan lokal
+- [x] Distribusi jarak horizontal dan vertikal untuk 3+ objek
+- [x] Ikon aksi Font Awesome Free inline/lokal; tanpa CDN
 
 ### 6.7 Efek
 - [x] Bayangan luar, bayangan dalam, glow
@@ -327,6 +333,113 @@ Legenda: `[x]` sudah lengkap · `[~]` ada tapi terbatas · `[ ]` belum ada
 - [ ] Cache `Path2D` untuk jalur kompleks
 - [ ] Autosave ke IndexedDB (localStorage terbatas ± 5 MB)
 - [ ] Service Worker / PWA agar bisa dipasang
+
+### 6.12 Pembuatan dan jenis frame
+- [ ] Preset ukuran di panel saat alat Frame aktif atau frame terpilih, dengan kategori: Telepon, Tablet, Desktop, Presentasi, Jam tangan, Kertas, Media sosial
+- [ ] Daftar preset bawaan (contoh: Desktop 1440×1024, Slide 16:9 1920×1080, A4 595×842, post Instagram)
+- [ ] Preset buatan sendiri (simpan ukuran frame terpilih sebagai preset)
+- [ ] Tukar orientasi potret ↔ lanskap
+- [ ] Bungkus seleksi dengan frame (Ctrl+Alt+G)
+- [ ] Lepas frame tanpa menghapus isinya
+- [ ] Ubah grup menjadi frame, dan frame menjadi grup
+- [~] Frame di dalam frame (bersarang): saat ini hanya lewat aturan titik tengah, belum induk-anak nyata
+- [ ] Corner smoothing (sudut ala iOS) untuk frame dan persegi
+
+### 6.13 Hierarki, seleksi, dan label frame
+- [ ] Hierarki induk–anak nyata: seret objek ke dalam/luar frame mengganti induknya otomatis (menggantikan aturan titik tengah)
+- [ ] Anak ikut berputar saat frame diputar
+- [ ] X/Y anak ditampilkan relatif terhadap frame induk
+- [ ] Label judul frame di kanvas: klik = pilih, seret = pindahkan, klik dua kali = ganti nama
+- [ ] Klik badan frame yang kosong memulai marquee; klik anak memilih anak
+- [ ] Enter = pilih anak, Shift+Enter = pilih induk, Tab / Shift+Tab = saudara berikutnya / sebelumnya
+- [ ] Panel layer: panah lipat/buka frame, anak bersarang di bawah induknya
+- [ ] Sembunyikan/kunci frame berlaku untuk seluruh isinya
+- [ ] Menghapus frame ikut menghapus isinya
+- [ ] Sorot (hover) frame dan anak saat kursor lewat
+
+### 6.14 Constraints dan resize responsif
+- [ ] Constraint horizontal: Kiri, Kanan, Kiri & Kanan, Tengah, Skala
+- [ ] Constraint vertikal: Atas, Bawah, Atas & Bawah, Tengah, Skala
+- [ ] Widget constraint di panel (kotak dengan garis penjangkar yang bisa diklik)
+- [ ] Anak mengikuti constraint saat ukuran frame berubah (handle atau angka L/T)
+- [ ] Resize frame tanpa mengubah isi (tahan Ctrl/Cmd saat menyeret handle)
+- [ ] Sesuaikan ukuran frame ke isinya (Resize to fit)
+- [ ] Constraint dinonaktifkan otomatis untuk anak yang diatur auto layout
+
+### 6.15 Auto layout
+- [ ] Tambah auto layout ke frame atau seleksi (Shift+A); hapus (Ctrl+Alt+Shift+A)
+- [ ] Flow (arah): Freeform, Vertikal, Horizontal, Grid (sesuai panel Layout di Figma)
+- [ ] Wrap: lanjut ke baris/kolom berikutnya + jarak antar baris
+- [ ] Jarak antar item (gap) berupa angka, atau Auto (space between)
+- [ ] Padding: seragam, horizontal/vertikal, dan 4 sisi terpisah
+- [ ] Perataan anak: 9 titik (kiri-atas … kanan-bawah), plus baseline untuk teks
+- [ ] Ukuran frame: Fixed atau Hug contents (menyusut mengikuti isi)
+- [ ] Ukuran anak: Fixed, Hug, atau Fill container
+- [ ] Lebar/tinggi minimum dan maksimum
+- [ ] Posisi absolut (anak mengabaikan auto layout tapi tetap di dalam frame)
+- [ ] Urutan tumpukan: item pertama di atas atau terakhir di atas
+- [ ] Garis (stroke) ikut atau tidak ikut dihitung dalam layout
+- [ ] Seret anak untuk menyusun ulang, dengan penanda sisip biru
+- [ ] Auto layout bersarang
+- [ ] Mode Grid: jumlah baris dan kolom, jarak antar sel, rentang sel (span)
+
+### 6.16 Layout grid (grid panduan di frame)
+Berbeda dengan grid piksel di 6.1: ini grid desain milik tiap frame.
+- [ ] Beberapa layout grid per frame, tipe Grid (persegi), Kolom, dan Baris
+- [ ] Kolom/Baris: jumlah, gutter, margin/offset, lebar/tinggi, perataan (Stretch, Kiri, Tengah, Kanan)
+- [ ] Grid persegi: ukuran sel
+- [ ] Warna dan opasitas grid
+- [ ] Tampil/sembunyikan layout grid (Ctrl+Shift+4)
+- [ ] Objek menempel (snap) ke garis layout grid
+- [ ] Preset 12 / 8 / 4 kolom (desktop / tablet / ponsel)
+- [ ] Layout grid tidak ikut diekspor
+
+### 6.17 Prototipe (alur antar frame)
+- [ ] Tab Design / Prototype di panel kanan
+- [ ] Titik awal alur (Flow starting point) pada frame, beberapa alur bernama
+- [ ] Hubungkan objek/frame ke frame tujuan dengan panah koneksi
+- [ ] Pemicu: On click, On drag, While hovering, While pressing, Mouse enter/leave, After delay, Key
+- [ ] Aksi: Navigate to, Back, Scroll to, Open link
+- [ ] Overlay: Open, Swap, Close overlay; posisi dan latar overlay
+- [ ] Animasi: Instant, Dissolve, Smart animate, Move in/out, Push, Slide in/out, dengan easing dan durasi
+- [ ] Perilaku scroll frame: Tanpa scroll, Horizontal, Vertikal, Dua arah
+- [ ] Fixed position: anak tetap di tempat saat frame di-scroll
+- [ ] Pratinjau di bingkai perangkat dan mode Present (Ctrl+Alt+Enter)
+- [ ] Warna latar prototipe dan skala pratinjau (Fit, Fill, 100%)
+- [ ] Tampil/sembunyikan semua panah koneksi
+
+### 6.18 Komponen dan varian
+- [ ] Buat komponen dari frame atau seleksi (Ctrl+Alt+K); komponen utama diberi penanda
+- [ ] Instance: salinan terhubung yang ikut berubah saat komponen utama berubah
+- [ ] Override pada instance (teks, warna, efek, visibilitas) dan reset override
+- [ ] Lepas instance (Ctrl+Alt+B), Go to main component, Push/Restore changes
+- [ ] Varian (component set): properti Variant (mis. State = Hover) dengan pemilih di panel
+- [ ] Properti komponen: Boolean, Text, Instance swap
+- [ ] Ganti komponen pada instance (Instance swap)
+- [ ] Instance bersarang
+- [ ] Panel Aset: daftar komponen, pencarian, seret ke kanvas
+- [ ] Ekspor/impor pustaka komponen antar proyek (JSON)
+
+### 6.19 Style dan variabel
+Style warna sudah ada di 6.6 (palet / style tersimpan), tidak diulang.
+- [ ] Style teks (font, ukuran, bobot, spasi) dan style efek
+- [ ] Style layout grid
+- [ ] Variabel: tipe Color, Number, String, Boolean
+- [ ] Koleksi variabel dan mode (mis. Light/Dark, Mobile/Desktop)
+- [ ] Terapkan variabel ke properti: warna isi/garis, lebar/tinggi, padding, gap, radius, opasitas, teks
+- [ ] Pilih mode variabel per frame (mis. frame ini memakai Dark)
+- [ ] Panel variabel berbentuk tabel
+- [ ] Ekspor/impor variabel sebagai token JSON
+
+### 6.20 Organisasi dan serah-terima
+- [ ] Section (Shift+Alt+S): wadah pengelompok frame dengan nama dan warna latar; frame di dalamnya ikut bergerak
+- [ ] Tidy up: rapikan objek/frame terpilih menjadi baris/kolom dengan jarak seragam
+- [ ] Duplikat frame diletakkan di samping kanan, tidak menumpuk
+- [ ] Ekspor semua frame sekaligus (batch, ZIP, atau PDF multi-halaman)
+- [ ] Urutan presentasi frame untuk PDF dan pratinjau
+- [ ] Ukur jarak: tahan Alt untuk melihat jarak antar objek dan ke tepi frame
+- [ ] Mode inspeksi: ukuran, posisi, warna, font; salin sebagai CSS atau kelas Tailwind
+- [ ] Salin dan tempel properti/gaya antar objek (Ctrl+Alt+C / Ctrl+Alt+V)
 
 ---
 
@@ -388,6 +501,9 @@ Legenda: `[x]` sudah lengkap · `[~]` ada tapi terbatas · `[ ]` belum ada
   dan migrasi di `js/simpan.js`. Refactor ini tidak mengubah format JSON.
 - UI memakai kelas Tailwind yang sudah ada; jQuery dan Tailwind dimuat dari
   `lib/`, bukan CDN. CSS kecil tetap berada di `index.html`.
+- Ikon Font Awesome Free yang digunakan inline di `js/inti.js` berasal dari
+  Fort Awesome, Copyright 2024 Fonticons, Inc.; lisensi ikon CC BY 4.0:
+  https://fontawesome.com/license/free. Tidak ada aset ikon yang dimuat dari CDN.
 - Ikon baru ditambahkan ke objek `P` di `js/inti.js` dalam gaya garis 24×24
   (`currentColor`). Teks UI dan komentar berbahasa Indonesia.
 - Hindari `requestAnimationFrame` terus-menerus; gambar ulang hanya saat perlu.
@@ -433,4 +549,4 @@ Legenda: `[x]` sudah lengkap · `[~]` ada tapi terbatas · `[ ]` belum ada
 
 ---
 
-*Dokumen diperbarui berdasarkan kode MiniFigma (format JSON v7).*
+*Dokumen diperbarui berdasarkan kode MiniFigma (format JSON v8).*

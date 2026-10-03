@@ -36,7 +36,7 @@ function ser(s){
 		export:{visible:s.exp!==false},effects:(s.fx||[]).map(serFx)
 	};
 	if(s.type==='polygon')st.polygon={sides:s.n};if(s.type==='star')st.star={points:s.n};
-	if(s.type==='text')st.text={content:s.text,font_size:s.fs,font_family:s.fontFamily||FF,bold:!!s.bold,italic:!!s.italic,underline:!!s.underline,alignment:s.textAlign||'left',line_height:s.lineHeight||125,letter_spacing:s.letterSpacing||0,fixed_width:!!s.textBox};
+	if(s.type==='text')st.text={content:s.text,font_size:s.fs,font_family:s.fontFamily||FF,font_weight:s.fontWeight??(s.bold?700:400),bold:!!s.bold,italic:!!s.italic,underline:!!s.underline,alignment:s.textAlign||'left',line_height:s.lineHeight||125,letter_spacing:s.letterSpacing||0,fixed_width:!!s.textBox};
 	if(s.type==='image')st.image={data_url:s.src,asset_id:s.assetId||null,source_name:s.sourceName||'Gambar'};
 	if(s.type==='rect'||s.type==='frame')st.appearance.corner_radii=(s.radii||[s.r,s.r,s.r,s.r]).map(rd);
 	if(s.type==='path')st.path={closed:!!s.closed,points:s.pts.map(p=>{const o={x:rd(p.x-b.x),y:rd(p.y-b.y)};if(hasH(p.ho))o.handle_out={x:rd(p.ho.x),y:rd(p.ho.y)};if(hasH(p.hi))o.handle_in={x:rd(p.hi.x),y:rd(p.hi.y)};return o;})};
@@ -59,7 +59,7 @@ function des(l){
 	if(type==='text'){
 		const tx=st.text||{};s.text=String(tx.content??'Teks').slice(0,10000);s.fs=Math.min(999,Math.max(4,num(tx.font_size,16)));
 		s.fontFamily=typeof tx.font_family==='string'&&tx.font_family.length<=80&&tx.font_family?tx.font_family:FF;
-		s.bold=!!tx.bold;s.italic=!!tx.italic;s.underline=!!tx.underline;s.textAlign=['left','center','right'].includes(tx.alignment)?tx.alignment:'left';
+		s.fontWeight=Math.round(cl(num(tx.font_weight,tx.bold?700:400),100,900,400)/100)*100;s.bold=s.fontWeight>=600;s.italic=!!tx.italic;s.underline=!!tx.underline;s.textAlign=['left','center','right'].includes(tx.alignment)?tx.alignment:'left';
 		s.lineHeight=Math.min(300,Math.max(50,num(tx.line_height,125)));s.letterSpacing=Math.min(100,Math.max(-20,num(tx.letter_spacing,0)));s.textBox=!!tx.fixed_width;fitText(s);
 	}
 	if(type==='image'){

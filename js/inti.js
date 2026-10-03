@@ -48,7 +48,7 @@ function flat(s){
 	return out;
 }
 function mk(type,x,y){
-	const id=uid++,s={id,type,x,y,w:0,h:0,r:0,rot:0,n:type==='star'?5:3,pts:[],closed:false,text:'Teks',fs:16,fontFamily:FF,bold:false,italic:false,underline:false,textAlign:'left',lineHeight:125,letterSpacing:0,textBox:false,fillOn:true,fill:'#d9d9d9',stroke:'#d9d9d9',sw:0,name:NAME[type]+' '+id};
+	const id=uid++,s={id,type,x,y,w:0,h:0,r:0,rot:0,n:type==='star'?5:3,pts:[],closed:false,text:'Teks',fs:16,fontFamily:FF,fontWeight:400,bold:false,italic:false,underline:false,textAlign:'left',lineHeight:125,letterSpacing:0,textBox:false,fillOn:true,fill:'#d9d9d9',stroke:'#d9d9d9',sw:0,name:NAME[type]+' '+id};
 	if(type==='frame')s.fill='#ffffff';if(type==='path'){s.fillOn=false;s.sw=2;}return s;
 }
 const pvt=s=>{const b=bbox(s);return [b.x+b.w*(s.pvx??.5),b.y+b.h*(s.pvy??.5)];};

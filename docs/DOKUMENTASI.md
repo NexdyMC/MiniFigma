@@ -293,6 +293,11 @@ Legenda: `[x]` sudah lengkap · `[~]` ada tapi terbatas · `[ ]` belum ada
 - [x] Pilihan font (family), tebal, miring, garis bawah
 - [x] Rata kiri / tengah / kanan, jarak baris, jarak huruf
 - [x] Edit teks langsung di kanvas (Enter = baris baru, Ctrl+Enter = selesai)
+- [x] Lebar kotak teks dapat diatur dari 100–900 px
+- [x] **Bobot font (font weight)**: dropdown 9 tingkat
+- [x] Hanya tampilkan bobot yang tersedia untuk font terpilih
+- [x] Bobot tersimpan di JSON (`setting.text.font_weight`, angka 100–900)
+
 
 ### 6.9 Riwayat, simpan, ekspor
 - [x] Undo/Redo (maks. 100 langkah): Ctrl+Z, Ctrl+Shift+Z / Ctrl+Y
@@ -324,6 +329,21 @@ Legenda: `[x]` sudah lengkap · `[~]` ada tapi terbatas · `[ ]` belum ada
 - [ ] Service Worker / PWA agar bisa dipasang
 
 ---
+
+**Daftar bobot font (font weight) untuk nomor 6.8 Text**
+
+| Angka | Nama di daftar | Keterangan |
+|---|---|---|
+| 100 | Thin | Paling tipis (disebut juga Hairline) |
+| 200 | Extra Light | Disebut juga Ultra Light |
+| 300 | Light | Tipis |
+| 400 | Regular | Normal; sama dengan kata kunci `normal` |
+| 500 | Medium | Sedikit lebih tebal dari normal |
+| 600 | Semi Bold | Disebut juga Demi Bold |
+| 700 | Bold | Tebal; sama dengan kata kunci `bold` |
+| 800 | Extra Bold | Disebut juga Ultra Bold |
+| 900 | Black | Paling tebal (disebut juga Heavy) |
+
 
 ## 7. Pintasan keyboard (yang sudah ada)
 

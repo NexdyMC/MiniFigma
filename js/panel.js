@@ -34,10 +34,11 @@ function flipSelection(axis){
 function syncProps(){
 	const a=selAll();if(!a.length)return;const s=a[0],one=a.length===1,B=one?bbox(s):ubox(a),R=v=>Math.round(v*100)/100,t=s.type;
 	$('#ptype').text(one?s.name.replace(/ \d+$/,''):(selG&&GR[selG]?GR[selG].name:a.length+' objek dipilih'));
+	const fixedText=one&&t==='text'&&s.textBox;
 	$('#px').val(R(B.x));$('#py').val(R(B.y));$('#prot').val(one?s.rot:0).prop('disabled',!one);$('#ppx').val(Math.round((s.pvx??.5)*100)).prop('disabled',!one);$('#ppy').val(Math.round((s.pvy??.5)*100)).prop('disabled',!one);
-	$('#pbm').val(s.bm||'normal');$('#fxsec').toggle(one);$('#pw').val(R(B.w)).prop('disabled',one&&t==='text'&&!s.textBox);$('#ph').val(R(B.h)).prop('disabled',one&&t==='text');$('#par').prop('checked',!!s.ar).prop('disabled',!one);
+	$('#pbm').val(s.bm||'normal');$('#fxsec').toggle(one);$('#pw').val(R(B.w)).prop('disabled',one&&t==='text'&&!s.textBox).attr({min:fixedText?100:1,max:fixedText?900:null});$('#pwlabel').text(fixedText?'Lebar kotak (100–900 px)':'Lebar');$('#ph').val(R(B.h)).prop('disabled',one&&t==='text');$('#par').prop('checked',!!s.ar).prop('disabled',!one);
 	$('#rown').toggle(one&&(t==='polygon'||t==='star'));$('#pn').val(s.n);$('#rowtxt').toggle(one&&t==='text');$('#pfs').val(s.fs);renderFontOptions(s.type==='text'?s.fontFamily:null);
-	if(one&&t==='text'){$('#pbold').toggleClass('on',!!s.bold);$('#pitalic').toggleClass('on',!!s.italic);$('#punderline').toggleClass('on',!!s.underline);$('#palign').val(s.textAlign||'left');$('#plh').val(s.lineHeight||125);$('#pls').val(s.letterSpacing||0);$('#ptextBox').prop('checked',!!s.textBox);}
+	if(one&&t==='text'){$('#pbold').toggleClass('on',(s.fontWeight??(s.bold?700:400))>=600);$('#pitalic').toggleClass('on',!!s.italic);$('#punderline').toggleClass('on',!!s.underline);$('#palign').val(s.textAlign||'left');$('#plh').val(s.lineHeight||125);$('#pls').val(s.letterSpacing||0);$('#ptextBox').prop('checked',!!s.textBox);renderFontWeightOptions(s.fontFamily,s.fontWeight??(s.bold?700:400));}
 	$('#pop').val(s.op??100);$('#peye').html(I(s.hid?'eyeoff':'eye',14));
 	const rr=a.find(x=>x.type==='rect'||x.type==='frame');$('#rowr').toggle(!!rr);$('#rowradii').toggle(!!rr);
 	if(rr){const r=rr.radii||[rr.r,rr.r,rr.r,rr.r],uniform=r.every(v=>v===r[0]);$('#pr').val(uniform?r[0]:'');r.forEach((v,i)=>$('#pr'+i).val(v));}
@@ -52,18 +53,19 @@ MF.init.push(function initPanel(){
 		[...a,...kidsFor(a)].forEach(s=>move(s,nx-b.x,ny-b.y));draw();save();
 	});
 	$('#prot').on('input',one(s=>{s.rot=parseFloat($('#prot').val())||0;}));
-	$('#pw').on('input',()=>{const b=selectionBox();if(!b)return;const w=Math.max(1,+$('#pw').val()||1);if(sel&&sel.type==='text'&&sel.textBox){sel.w=w;fitText(sel);refresh();save();return;}let h=b.h;if(sel&&sel.ar)h=w*(b.h/(b.w||1));$('#ph').val(Math.round(h*100)/100);resizeSelectionTo(w,h);});
+	$('#pw').on('input',()=>{const b=selectionBox();if(!b)return;const w=sel&&sel.type==='text'&&sel.textBox?cl($('#pw').val(),100,900,100):Math.max(1,+$('#pw').val()||1);if(sel&&sel.type==='text'&&sel.textBox){sel.w=w;$('#pw').val(w);fitText(sel);refresh();save();return;}let h=b.h;if(sel&&sel.ar)h=w*(b.h/(b.w||1));$('#ph').val(Math.round(h*100)/100);resizeSelectionTo(w,h);});
 	$('#ph').on('input',()=>{const b=selectionBox();if(!b)return;let h=Math.max(1,+$('#ph').val()||1),w=b.w;if(sel&&sel.ar)w=h*(b.w/(b.h||1));$('#pw').val(Math.round(w*100)/100);resizeSelectionTo(w,h);});
 	$('#par').on('change',one(s=>{s.ar=chk('#par');}));
 	$('#ppx,#ppy').on('input',()=>{if(!sel)return;setPivot(sel,cl($('#ppx').val(),-500,500,50)/100,cl($('#ppy').val(),-500,500,50)/100);draw();save();$('#px').val(rd(bbox(sel).x));$('#py').val(rd(bbox(sel).y));});
 	$('#pbm').html(BM.map(b=>`<option value="${b}">${b}</option>`).join('')).on('change',()=>each(s=>{s.bm=$('#pbm').val();}));
 	$('#pn').on('input',one(s=>{s.n=Math.round(cl($('#pn').val(),3,20,3));}));
 	$('#pfs').on('input',()=>{if(!sel||sel.type!=='text')return;sel.fs=cl($('#pfs').val(),4,999,16);fitText(sel);refresh();save();});
-	$('#pbold,#pitalic,#punderline').on('click',function(){if(!sel||sel.type!=='text')return;const key={pbold:'bold',pitalic:'italic',punderline:'underline'}[this.id];sel[key]=!sel[key];fitText(sel);refresh();save();});
+	$('#pweight').on('change',()=>{if(!sel||sel.type!=='text')return;sel.fontWeight=cl($('#pweight').val(),100,900,400);sel.bold=sel.fontWeight>=600;fitText(sel);refresh();save();});
+	$('#pbold,#pitalic,#punderline').on('click',function(){if(!sel||sel.type!=='text')return;const key={pbold:'bold',pitalic:'italic',punderline:'underline'}[this.id];if(key==='bold'){sel.fontWeight=(sel.fontWeight??(sel.bold?700:400))>=600?400:700;sel.bold=sel.fontWeight>=600;}else sel[key]=!sel[key];fitText(sel);refresh();save();});
 	$('#palign').on('change',()=>{if(!sel||sel.type!=='text')return;sel.textAlign=$('#palign').val();fitText(sel);refresh();save();});
 	$('#plh,#pls').on('input',()=>{if(!sel||sel.type!=='text')return;sel.lineHeight=cl($('#plh').val(),50,300,125);sel.letterSpacing=cl($('#pls').val(),-20,100,0);fitText(sel);refresh();save();});
-	$('#ptextBox').on('change',()=>{if(!sel||sel.type!=='text')return;sel.textBox=chk('#ptextBox');fitText(sel);refresh();save();});
-	$('#pfont').on('change',()=>{if(!sel||sel.type!=='text')return;const s=sel;s.fontFamily=$('#pfont').val();document.fonts.load(fontCss(s)).then(()=>{fitText(s);refresh();save();}).catch(()=>note('Font gagal dimuat: '+s.fontFamily));});
+	$('#ptextBox').on('change',()=>{if(!sel||sel.type!=='text')return;sel.textBox=chk('#ptextBox');if(sel.textBox)sel.w=cl(sel.w,100,900,100);fitText(sel);refresh();save();});
+	$('#pfont').on('change',()=>{if(!sel||sel.type!=='text')return;const s=sel;s.fontFamily=$('#pfont').val();document.fonts.load(fontCss(s)).then(()=>{s.fontWeight=renderFontWeightOptions(s.fontFamily,s.fontWeight??(s.bold?700:400));s.bold=s.fontWeight>=600;fitText(s);refresh();save();}).catch(()=>note('Font gagal dimuat: '+s.fontFamily));});
 	$('#pop').on('input',()=>each(s=>{s.op=cl($('#pop').val(),0,100,100);}));
 	$('#pr').on('input',()=>each(s=>{if(s.type==='rect'||s.type==='frame'){s.r=Math.max(0,+$('#pr').val()||0);s.radii=[s.r,s.r,s.r,s.r];}}));
 	$('#pr0,#pr1,#pr2,#pr3').on('input',function(){const i=+this.id.slice(2);selAll().forEach(s=>{if(s.type==='rect'||s.type==='frame'){s.radii=s.radii||[s.r,s.r,s.r,s.r];s.radii[i]=Math.max(0,+$('#pr'+i).val()||0);}});draw();save();});

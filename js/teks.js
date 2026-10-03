@@ -1,9 +1,31 @@
 /* [6.8] Teks. Isi: layout teks, editor kanvas, dan font lokal. Bukan di sini: panel umum, render objek, serialisasi. */
+const FONT_WEIGHTS=[[100,'Thin'],[200,'Extra Light'],[300,'Light'],[400,'Regular'],[500,'Medium'],[600,'Semi Bold'],[700,'Bold'],[800,'Extra Bold'],[900,'Black']];
+const fontWeightCache=new Map();
 function familyCss(f){
 	f=String(f||FF).replace(/[\u0000-\u001f\u007f]/g,'').slice(0,80);
 	return f==='Inter,system-ui,sans-serif'?FF:/^(serif|sans-serif|monospace|cursive|fantasy|system-ui)$/.test(f)?f:`"${f.replace(/["\\]/g,'\\$&')}"`;
 }
-function fontCss(s){return `${s.italic?'italic ':''}${s.bold?'bold ':''}${s.fs}px ${familyCss(s.fontFamily||FF)}`;}
+function fontCss(s){return `${s.italic?'italic ':''}${s.fontWeight??(s.bold?700:400)} ${s.fs}px ${familyCss(s.fontFamily||FF)}`;}
+function availableFontWeights(family){
+	family=family||FF;if(fontWeightCache.has(family))return fontWeightCache.get(family);
+	const canvas=document.createElement('canvas');canvas.width=260;canvas.height=64;
+	const g=canvas.getContext('2d',{willReadFrequently:true});if(!g)throw new Error('Canvas tidak tersedia untuk memeriksa bobot font.');
+	const seen=new Set(),weights=[];
+	FONT_WEIGHTS.forEach(([weight])=>{
+		g.clearRect(0,0,canvas.width,canvas.height);g.font=`${weight} 40px ${familyCss(family)}`;g.textBaseline='alphabetic';g.fillStyle='#000';g.fillText('Hamburgefontsiv 012345',1,50);
+		const pixels=g.getImageData(0,0,canvas.width,canvas.height).data;let hash=2166136261;
+		for(let i=3;i<pixels.length;i+=4)hash=Math.imul(hash^pixels[i],16777619);
+		if(!seen.has(hash)){seen.add(hash);weights.push(weight);}
+	});
+	if(!weights.includes(400))weights.unshift(400);
+	fontWeightCache.set(family,weights);return weights;
+}
+function renderFontWeightOptions(family,current){
+	const weights=availableFontWeights(family),$select=$('#pweight').empty();
+	weights.forEach(weight=>{const label=FONT_WEIGHTS.find(x=>x[0]===weight)[1];$select.append(new Option(`${weight} · ${label}`,weight));});
+	const selected=weights.reduce((best,w)=>Math.abs(w-current)<Math.abs(best-current)?w:best,weights[0]);
+	$select.val(String(selected));return selected;
+}
 function textWidth(s,text,g=ctx){
 	g.font=fontCss(s);const native='letterSpacing' in g,old=native?g.letterSpacing:'';if(native)g.letterSpacing=(s.letterSpacing||0)+'px';
 	const width=g.measureText(text).width;if(native)g.letterSpacing=old;
@@ -30,7 +52,7 @@ function fitText(s){
 function positionTextEditor(){
 	if(!editingText)return;const s=editingText.layer,[x,y]=w2s(s.x,s.y),w=Math.max(4,s.w*V.z),h=Math.max(4,s.h*V.z);
 	$('#textedit').css({display:'block',left:x,top:y,width:w+4,height:h+2,fontSize:s.fs*V.z,lineHeight:(s.fs*(s.lineHeight||125)/100*V.z)+'px',
-		fontFamily:familyCss(s.fontFamily||FF),fontWeight:s.bold?'bold':'normal',fontStyle:s.italic?'italic':'normal',textDecoration:s.underline?'underline':'none',
+		fontFamily:familyCss(s.fontFamily||FF),fontWeight:s.fontWeight??(s.bold?700:400),fontStyle:s.italic?'italic':'normal',textDecoration:s.underline?'underline':'none',
 		textAlign:s.textAlign||'left',letterSpacing:(s.letterSpacing||0)*V.z+'px',color:s.fill,opacity:(s.op??100)/100*(s.fo??100)/100,
 		transformOrigin:`${(s.pvx??.5)*w}px ${(s.pvy??.5)*h}px`,transform:`rotate(${s.rot||0}deg) scale(${s.flipX?-1:1},${s.flipY?-1:1})`});
 }
@@ -50,7 +72,7 @@ function renderFontOptions(current){
 const fontPayload=data=>data.replace(/^data:font\/ttf;base64,/i,'');
 function fromBase64(s){const raw=atob(s),bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);return bytes;}
 function toBase64(bytes){let raw='';for(let i=0;i<bytes.length;i+=0x8000)raw+=String.fromCharCode(...bytes.subarray(i,i+0x8000));return btoa(raw);}
-async function activateFont(font){const face=new FontFace(font.name,fromBase64(fontPayload(font.data)));await face.load();document.fonts.add(face);fontFaces.set(font.name,face);}
+async function activateFont(font){const face=new FontFace(font.name,fromBase64(fontPayload(font.data)));await face.load();document.fonts.add(face);fontFaces.set(font.name,face);fontWeightCache.delete(font.name);}
 async function loadFontLibrary(){
 	try{
 		const parsed=JSON.parse(localStorage.getItem(FONT_KEY)||'[]');if(!Array.isArray(parsed))throw new Error('Format library font tidak valid.');
@@ -71,7 +93,7 @@ function renderFontLibrary(){
 		$('<span class="flex-1 truncate"></span>').text(font.name+' · '+Math.ceil(font.bytes/1024)+' KB').appendTo($row);
 		$('<button class="px-2 py-1 rounded hover:bg-neutral-600">Hapus</button>').appendTo($row).on('click',()=>{
 			const next=localFonts.filter(f=>f.name!==font.name);if(!saveFontLibrary(next))return;
-			const face=fontFaces.get(font.name);if(face)document.fonts.delete(face);fontFaces.delete(font.name);let changed=false;
+			const face=fontFaces.get(font.name);if(face)document.fonts.delete(face);fontFaces.delete(font.name);fontWeightCache.delete(font.name);let changed=false;
 			S.forEach(s=>{if(s.type==='text'&&s.fontFamily===font.name){s.fontFamily=FF;fitText(s);changed=true;}});
 			if(changed){refresh();save();}renderFontLibrary();renderFontOptions(sel&&sel.type==='text'?sel.fontFamily:null);
 		});
@@ -88,7 +110,7 @@ async function addFontFiles(files){
 		try{
 			const bytes=new Uint8Array(await file.arrayBuffer());if(!fontMagic(bytes)){note('File tidak memiliki signature TrueType yang valid.');continue;}
 			const font={name,data:'data:font/ttf;base64,'+toBase64(bytes),bytes:file.size};await activateFont(font);
-			if(!saveFontLibrary([...localFonts,font])){const face=fontFaces.get(name);if(face)document.fonts.delete(face);fontFaces.delete(name);continue;}
+			if(!saveFontLibrary([...localFonts,font])){const face=fontFaces.get(name);if(face)document.fonts.delete(face);fontFaces.delete(name);fontWeightCache.delete(name);continue;}
 			renderFontLibrary();renderFontOptions(sel&&sel.type==='text'?sel.fontFamily:null);note('Font "'+name+'" berhasil dipasang dan disimpan di browser ini.');
 		}catch(e){note('Gagal memasang font "'+name+'": '+e.message);}
 	}

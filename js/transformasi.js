@@ -60,12 +60,24 @@ function drawHoverOverlay(ctx){
 	ctx.stroke();ctx.restore();
 }
 const pivShown=()=>sel&&(altDown||(sel.pvx!==undefined&&(sel.pvx!==.5||sel.pvy!==.5)));
-function rotZone(sx,sy){if(!sel)return false;const cs=corners(sel);if(!cs.some(q=>{const d=Math.hypot(q[0]-sx,q[1]-sy);return d>=8&&d<=26;}))return false;return !inPoly(sx,sy,cs.map(q=>({x:q[0],y:q[1]})));}
+function selectionCorners(){if(sel)return corners(sel);if(!multi.length)return [];const b=ubox(multi),a=w2s(b.x,b.y),z=w2s(b.x+b.w,b.y+b.h);return [[a[0],a[1]],[z[0],a[1]],[z[0],z[1]],[a[0],z[1]]];}
+function rotZone(sx,sy,cs){if(!cs||cs.length<4)return false;if(!cs.some(q=>{const d=Math.hypot(q[0]-sx,q[1]-sy);return d>=8&&d<=26;}))return false;return !inPoly(sx,sy,cs.map(q=>({x:q[0],y:q[1]})));}
 const ROT_CUR=`url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke-linecap='round' stroke-linejoin='round'><path d='M20 12a8 8 0 1 1-2.5-5.8M20 3.5v5h-5' stroke='white' stroke-width='4'/><path d='M20 12a8 8 0 1 1-2.5-5.8M20 3.5v5h-5' stroke='black' stroke-width='1.8'/></svg>") 12 12, alias`;
-function hoverCursor(sx,sy){if(tool==='select')cv.style.cursor=rotZone(sx,sy)?ROT_CUR:'default';}
+function hoverCursor(sx,sy){if(tool==='select')cv.style.cursor=rotZone(sx,sy,selectionCorners())?ROT_CUR:'default';}
 const canRad=s=>s&&(s.type==='rect'||s.type==='frame')&&Math.min(s.w,s.h)*V.z>40;
 function radH(s){const cap=Math.min(s.w,s.h)/2,r=(s.radii||[s.r,s.r,s.r,s.r]).map(v=>Math.min(Math.max(v||0,12/V.z),cap));return [[s.x+r[0],s.y+r[0]],[s.x+s.w-r[1],s.y+r[1]],[s.x+s.w-r[2],s.y+s.h-r[2]],[s.x+r[3],s.y+s.h-r[3]]].map(p=>w2s(...rp(s,p[0],p[1])));}
 function corners(s){const b=bbox(s);return [[b.x,b.y],[b.x+b.w,b.y],[b.x+b.w,b.y+b.h],[b.x,b.y+b.h]].map(p=>w2s(...rp(s,p[0],p[1])));}
+function rotationMembers(items){return [...new Set([...items,...kidsFor(items)])];}
+function rotationStates(members){return members.map(m=>({m,x:m.x,y:m.y,pts:m.type==='path'?JSON.parse(JSON.stringify(m.pts)):null,rot:m.rot||0}));}
+function normalizeRotation(rotation){return Math.round((((rotation+180)%360+360)%360-180)*100)/100;}
+function rotateSet(members,center,delta,startStates){
+	const angle=delta*Math.PI/180,c=Math.cos(angle),n=Math.sin(angle);
+	startStates.forEach(state=>{
+		const m=state.m;m.x=state.x;m.y=state.y;if(state.pts)m.pts=JSON.parse(JSON.stringify(state.pts));
+		m.rot=state.rot;const p=pvt(m),x=p[0]-center[0],y=p[1]-center[1],dx=center[0]+x*c-y*n-p[0],dy=center[1]+x*n+y*c-p[1];
+		move(m,dx,dy);m.rot=normalizeRotation(state.rot+delta);
+	});
+}
 const HANDLE_DIRS=['nw','n','ne','e','se','s','sw','w'];
 function handlePoints(){
 	if(sel){const b=bbox(sel),pts=[[b.x,b.y],[b.x+b.w/2,b.y],[b.x+b.w,b.y],[b.x+b.w,b.y+b.h/2],[b.x+b.w,b.y+b.h],[b.x+b.w/2,b.y+b.h],[b.x,b.y+b.h],[b.x,b.y+b.h/2]];return pts.map(p=>w2s(...rp(sel,p[0],p[1])));}
@@ -105,11 +117,11 @@ function drawSelectionOverlay(ctx){
 	if(!editingText)handlePoints().forEach(q=>{ctx.fillStyle='#fff';ctx.fillRect(q[0]-4,q[1]-4,8,8);ctx.strokeRect(q[0]-4,q[1]-4,8,8);});
 	if(drag&&drag.k==='box'){ctx.fillStyle='rgba(13,153,255,.12)';ctx.fillRect(drag.x0,drag.y0,drag.x1-drag.x0,drag.y1-drag.y0);ctx.strokeRect(drag.x0,drag.y0,drag.x1-drag.x0,drag.y1-drag.y0);}
 	if(!editingText&&canRad(sel))radH(sel).forEach(q=>{ctx.beginPath();ctx.arc(q[0],q[1],4.5,0,7);ctx.fillStyle='#fff';ctx.fill();ctx.stroke();});
-	if(!editingText&&sel&&((drag&&drag.k==='rot')||pivShown())){
-		const q=w2s(...pvt(sel));ctx.strokeStyle='#f5a623';ctx.fillStyle='#fff';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(q[0],q[1],5,0,7);ctx.fill();ctx.stroke();ctx.beginPath();ctx.arc(q[0],q[1],1.6,0,7);ctx.fillStyle='#f5a623';ctx.fill();
+	if(!editingText&&((drag&&drag.k==='rot')||(sel&&pivShown()))){
+		const q=w2s(...(drag&&drag.k==='rot'?drag.center:pvt(sel)));ctx.strokeStyle='#f5a623';ctx.fillStyle='#fff';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(q[0],q[1],5,0,7);ctx.fill();ctx.stroke();ctx.beginPath();ctx.arc(q[0],q[1],1.6,0,7);ctx.fillStyle='#f5a623';ctx.fill();
 	}
 	if(drag&&drag.k==='rot'){
-		const txt=Math.round(sel.rot)+'°';ctx.font='11px '+FF;const w=ctx.measureText(txt).width+12;ctx.fillStyle='#0d99ff';ctx.beginPath();ctx.roundRect(mouse.x+14,mouse.y+14,w,18,4);ctx.fill();ctx.fillStyle='#fff';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(txt,mouse.x+20,mouse.y+23);
+		const txt=Math.round(drag.delta)+'°';ctx.font='11px '+FF;const w=ctx.measureText(txt).width+12;ctx.fillStyle='#0d99ff';ctx.beginPath();ctx.roundRect(mouse.x+14,mouse.y+14,w,18,4);ctx.fill();ctx.fillStyle='#fff';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(txt,mouse.x+20,mouse.y+23);
 	}
 	const A=selAll();
 	if(A.length&&!editingText&&!(drag&&drag.k==='box')){
@@ -139,7 +151,7 @@ MF.init.push(function initTransform(){
 		refresh();return true;
 	}});
 	MF.down.push({p:75,fn(e,c){const hi=handlePoints().findIndex(q=>Math.hypot(q[0]-c.sx,q[1]-c.sy)<8);return startResizeAt(hi);}});
-	MF.down.push({p:80,fn(e,c){if(sel&&rotZone(c.sx,c.sy)){const pv=pvt(sel);drag={k:'rot',a0:Math.atan2(c.wy-pv[1],c.wx-pv[0]),r0:sel.rot||0};return true;}return false;}});
+	MF.down.push({p:80,fn(e,c){const items=selAll(),cs=selectionCorners();if(items.length&&rotZone(c.sx,c.sy,cs)){const box=ubox(items),center=items.length===1?pvt(items[0]):[box.x+box.w/2,box.y+box.h/2],members=rotationMembers(items);drag={k:'rot',a0:Math.atan2(c.wy-center[1],c.wx-center[0]),center,items:members,states:rotationStates(members),delta:0};return true;}return false;}});
 	MF.down.push({p:90,fn(e,c){
 		const target=pickAt(c.wx,c.wy,e),h=target&&target.hit;
 		const cur=selAll(),add=e.shiftKey;
@@ -161,7 +173,7 @@ MF.init.push(function initTransform(){
 			nh=[...new Set(nh.flatMap(s=>s.gid?leavesOf(rootOf(s)):[s]))].filter(s=>!drag.base.includes(s));setSel([...drag.base,...nh]);
 		}
 	};
-	MF.move.rot=(e,c)=>{const pv=pvt(sel);let r=drag.r0+(Math.atan2(c.wy-pv[1],c.wx-pv[0])-drag.a0)*180/Math.PI;if(e.shiftKey)r=Math.round(r/15)*15;r=Math.round((((r+180)%360+360)%360-180)*100)/100;if(sel.type==='frame')setFrameRotation(sel,r);else sel.rot=r;syncProps();};
+	MF.move.rot=(e,c)=>{let delta=(Math.atan2(c.wy-drag.center[1],c.wx-drag.center[0])-drag.a0)*180/Math.PI;delta=((delta+180)%360+360)%360-180;if(e.shiftKey)delta=Math.round(delta/15)*15;drag.delta=Math.round(delta*100)/100;rotateSet(drag.items,drag.center,drag.delta,drag.states);syncProps();};
 	MF.move.piv=(e,c)=>{const b=bbox(sel),q=rp(sel,c.wx,c.wy,-1);setPivot(sel,b.w?(q[0]-b.x)/b.w:.5,b.h?(q[1]-b.y)/b.h:.5);syncProps();};
 	MF.move.rad=(e,c)=>{
 		const q=rp(sel,c.wx,c.wy,-1),sg=[[1,1],[-1,1],[-1,-1],[1,-1]][drag.i],cx=[sel.x,sel.x+sel.w,sel.x+sel.w,sel.x][drag.i],cy=[sel.y,sel.y,sel.y+sel.h,sel.y+sel.h][drag.i];

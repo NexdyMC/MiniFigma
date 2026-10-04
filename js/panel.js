@@ -369,7 +369,7 @@ function syncProps(){
 	syncNumber('px',values.x,false,isMixed(val(x=>R(frameParentForSelection([x])?frameLocalPoint(frameParentForSelection([x]),bbox(x).x,bbox(x).y)[0]:bbox(x).x))));
 	syncNumber('py',values.y,false,isMixed(val(x=>R(frameParentForSelection([x])?frameLocalPoint(frameParentForSelection([x]),bbox(x).x,bbox(x).y)[1]:bbox(x).y))));
 	$('#px,#py').data('framePosition',{x:B.x,y:B.y}).attr('title',parentFrame?'Posisi relatif terhadap '+parentFrame.name:'Posisi di kanvas');
-	syncNumber('prot',one?s.rot||0:0,!one,isMixed(val(x=>x.rot||0)));
+	syncNumber('prot',one?s.rot||0:0,false,false);
 	syncNumber('ppx',Math.round((s.pvx??.5)*100),!one,isMixed(val(x=>Math.round((x.pvx??.5)*100))));
 	syncNumber('ppy',Math.round((s.pvy??.5)*100),!one,isMixed(val(x=>Math.round((x.pvy??.5)*100))));
 	const mixedBlend=isMixed(val(x=>x.bm||'normal')),blend=s.bm||'normal';$('#pbm').val(mixedBlend?'':blend).attr({'placeholder':mixedBlend?'Campuran':'','data-value':mixedBlend?'':blend});$('#fxsec').toggle(one);
@@ -425,7 +425,11 @@ MF.init.push(function initPanel(){
 		if(!isFinite(dx)||!isFinite(dy)){note('Posisi relatif frame tidak valid.');return;}
 		[...a,...kidsFor(a)].filter((s,i,items)=>items.indexOf(s)===i).forEach(s=>move(s,dx,dy));syncProps();draw();save();
 	});
-	$('#prot').on('change',one(s=>{const rotation=parseFloat($('#prot').val())||0;if(s.type==='frame')setFrameRotation(s,rotation);else s.rot=rotation;}));
+	$('#prot').on('change',function(){
+		const selected=selAll();if(!selected.length)return;
+		const rotation=parseFloat($('#prot').val())||0,single=selected.length===1,items=rotationMembers(selected),box=ubox(selected),center=single?pvt(selected[0]):[box.x+box.w/2,box.y+box.h/2],states=rotationStates(items);
+		rotateSet(items,center,single?rotation-(selected[0].rot||0):rotation,states);syncProps();draw();save();
+	});
 	$('#pw').on('change',()=>{const b=selectionBox();if(!b)return;const w=Math.max(1,+$('#pw').val()||1);if(sel&&sel.type==='text'){if(sel.tm==='aw')sel.tm='ah';sel.w=w;fitText(sel);refresh();save();return;}let h=b.h;if(sel&&sel.ar)h=w*(b.h/(b.w||1));$('#ph').val(Math.round(h*100)/100);resizeSelectionTo(w,h);});
 	$('#ph').on('change',()=>{const b=selectionBox();if(!b)return;let h=Math.max(1,+$('#ph').val()||1),w=b.w;if(sel&&sel.type==='text'){sel.tm='fx';sel.h=h;sel.w=w;fitText(sel);refresh();save();return;}if(sel&&sel.ar)w=h*(b.w/(b.h||1));$('#pw').val(Math.round(w*100)/100);resizeSelectionTo(w,h);});
 	$('#par').on('change',()=>{each(s=>{s.ar=chk('#par');});$('#parBtn').toggleClass('on',chk('#par')).html(I(chk('#par')?'lock':'unlock',14));});

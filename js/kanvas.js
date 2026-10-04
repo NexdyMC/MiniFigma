@@ -23,6 +23,9 @@ function paintStyle(g,s,p){
 	stops.slice().sort((a,b)=>(+a.pos||0)-(+b.pos||0)).forEach((stop,i)=>grad.addColorStop(cl((+stop.pos||0)/100,0,1,i/(stops.length-1)),stop.color||'#d9d9d9'));
 	return grad;
 }
+function paintBlend(g,p){
+	if(p.blendMode)g.globalCompositeOperation=p.blendMode==='normal'?'source-over':p.blendMode;
+}
 function drawArrow(g,s,p,which){
 	const type=p[which+'Arrow']||'none';if(type==='none'||s.type==='text')return;
 	const q=flat(s);if(q.length<2)return;
@@ -58,18 +61,20 @@ function body(g,s,op){
 	if(s.type==='text'){
 		g.font=fontCss(s);g.textBaseline='top';
 		getPaintLayers(s,'fill').filter(p=>p.visible!==false).forEach(p=>{
-			g.globalAlpha=op*(p.opacity??100)/100;g.fillStyle=paintStyle(g,s,p);
+			g.save();paintBlend(g,p);g.globalAlpha=op*(p.opacity??100)/100;g.fillStyle=paintStyle(g,s,p);
 			(s._lines||[displayText(s)]).forEach((line,i)=>drawTextRow(g,s,line,i,s._lineWidths&&s._lineWidths[i]||textWidth(s,line,g)));
+			g.restore();
 		});
 		getPaintLayers(s,'stroke').filter(p=>p.visible!==false).forEach(p=>{
-			const weight=Math.max(.1,+p.weight||1);g.globalAlpha=op*(p.opacity??100)/100;g.strokeStyle=paintStyle(g,s,p);g.lineWidth=weight;g.lineJoin=p.join||'round';g.lineCap=p.cap||'butt';g.setLineDash(({solid:[],dash:[weight*4,weight*2],dot:[weight,weight*2],dashDot:[weight*4,weight*2,weight,weight*2]})[p.dash]||[]);
+			g.save();paintBlend(g,p);const weight=Math.max(.1,+p.weight||1);g.globalAlpha=op*(p.opacity??100)/100;g.strokeStyle=paintStyle(g,s,p);g.lineWidth=weight;g.lineJoin=p.join||'round';g.lineCap=p.cap||'butt';g.setLineDash(({solid:[],dash:[weight*4,weight*2],dot:[weight,weight*2],dashDot:[weight*4,weight*2,weight,weight*2]})[p.dash]||[]);
 			(s._lines||[displayText(s)]).forEach((line,i)=>drawTextStrokeRow(g,s,line,i,s._lineWidths&&s._lineWidths[i]||textWidth(s,line,g)));
+			g.restore();
 		});
 		return;
 	}
 	const path=new Path2D();trace(path,s);
-	if(s.type!=='path'||s.pts.length>2)getPaintLayers(s,'fill').filter(p=>p.visible!==false).forEach(p=>{g.globalAlpha=op*(p.opacity??100)/100;g.fillStyle=paintStyle(g,s,p);g.fill(path);});
-	getPaintLayers(s,'stroke').filter(p=>p.visible!==false).forEach(p=>drawStroke(g,s,p,op));
+	if(s.type!=='path'||s.pts.length>2)getPaintLayers(s,'fill').filter(p=>p.visible!==false).forEach(p=>{g.save();paintBlend(g,p);g.globalAlpha=op*(p.opacity??100)/100;g.fillStyle=paintStyle(g,s,p);g.fill(path);g.restore();});
+	getPaintLayers(s,'stroke').filter(p=>p.visible!==false).forEach(p=>{g.save();paintBlend(g,p);drawStroke(g,s,p,op);g.restore();});
 }
 let textEffectBuffers=null;
 function textEffectCanvases(g){

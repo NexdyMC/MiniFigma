@@ -169,7 +169,6 @@ const one=fn=>()=>{if(sel){fn(sel);draw();save();}};
 const hex=v=>{v=(v||'').trim();if(v[0]!=='#')v='#'+v;return /^#[0-9a-f]{6}$/i.test(v)?v.toLowerCase():null;};
 const PALETTE_KEY='minifigma.palette',MAX_PALETTE=24;
 let paletteSignature='';
-let colorPick=null;
 function basePaint(kind,color){
 	return kind==='fill'?{type:'solid',color:color||'#d9d9d9',color2:'#ffffff',angle:0,opacity:100,visible:true}:
 		{type:'solid',color:color||'#d9d9d9',color2:'#ffffff',angle:0,opacity:100,visible:true,weight:1,position:'center',dash:'solid',cap:'butt',join:'round',startArrow:'none',endArrow:'none'};
@@ -194,29 +193,29 @@ function syncGradientPreview($card,p){
 }
 function syncSwatch($card,key,color,opacity){
 	$card.find('.mf-color').each(function(){
-		const input=$(this).find('input[data-k]')[0];if(!input||input.dataset.k!==key)return;
-		$(this).css('background-color',color).toggleClass('checker',opacity<100);
+		const input=$(this).find('[data-k], [data-color-key]')[0];if(!input||(input.dataset.k||input.dataset.colorKey)!==key)return;
+		$(this).attr('data-color',color).css('background-color',color).toggleClass('checker',opacity<100);
 	});
 }
 function updateGradientCard($card){
 	const type=$card.find('[data-k="type"]')[0]?.dataset.value||$card.find('[data-k="type"]').val(),p={
 		type,color:$card.find('[data-k="color"]').val(),color2:$card.find('[data-k="color2"]').val(),
-		angle:$card.find('[data-k="angle"]')[0]?.dataset.value||$card.find('[data-k="angle"]').val(),stops:[...$card.find('[data-stop]')].map(el=>({pos:+$(el).find('[data-k="stopPos"]').val()||0,color:hex($(el).find('[data-k="stopColor"]').val())||'#d9d9d9'}))
+		angle:$card.find('[data-k="angle"]')[0]?.dataset.value||$card.find('[data-k="angle"]').val(),stops:[...$card.find('[data-stop]')].map(el=>({pos:+$(el).find('[data-k="stopPos"]').val()||0,color:hex(el.querySelector('[data-color-key="stopColor"]')?.dataset.color)||'#d9d9d9'}))
 	};
 	$card.find('[data-gradient]').toggleClass('hidden',type==='solid');
 	$card.find('[data-start-label]').text(type==='solid'?'Warna':'Awal · 0%');
 	syncGradientPreview($card,{...p,type});
 }
-function setPaintValue(kind,index,key,value){
+function setPaintValue(kind,index,key,value,commit=true){
 	const selected=selAll(),source=selected.length?getPaintLayers(selected[0],kind)[index]:null,template=source||basePaint(kind);
 	selected.forEach(s=>{
 		const layers=ensurePaintLayers(s,kind);
 		while(layers.length<=index)layers.push({...template});
 		layers[index][key]=value;syncLegacyPaint(s,kind);
 	});
-	draw();save();
+	draw();if(commit)save();
 }
-function setPaintStopValue(kind,index,stopIndex,key,value){
+function setPaintStopValue(kind,index,stopIndex,key,value,commit=true){
 	selAll().forEach(s=>{
 		const layers=ensurePaintLayers(s,kind),p=layers[index]||(layers[index]=basePaint(kind)),stops=paintStops(p);
 		while(stops.length<=stopIndex&&stops.length<8)stops.push({pos:100,color:p.color||'#d9d9d9'});
@@ -224,7 +223,7 @@ function setPaintStopValue(kind,index,stopIndex,key,value){
 		stops[stopIndex][key]=key==='color'?hex(value)||stops[stopIndex].color:cl(value,0,100,stops[stopIndex].pos);
 		p.stops=stops.sort((a,b)=>a.pos-b.pos);p.color=p.stops[0].color;p.color2=p.stops[p.stops.length-1].color;syncLegacyPaint(s,kind);
 	});
-	draw();save();
+	draw();if(commit)save();
 }
 function addGradientStop(kind,index){
 	selAll().forEach(s=>{
@@ -256,11 +255,11 @@ function paintCard(kind,index,p){
 	const stroke=kind==='stroke',gradient=p.type!=='solid',color=hex(p.color)||'#d9d9d9',stops=paintStops(p);
 	const typeItems=[['solid','Solid'],['linear','Gradien linear'],['radial','Gradien radial'],['angular','Gradien sudut']].map(([v,label])=>({v,label}));
 	const angleItems=[0,45,90,135,180,225,270,315].map(v=>({v,label:v+'°'}));
-	const stopRows=stops.map((s,i)=>`<div class="mf-paint-row" data-stop="${i}"><label class="mf-color checker" title="Pilih warna stop"><input data-k="stopColor" type="color" value="${s.color}" aria-label="Warna stop ${i+1}"></label><input data-k="stopHex" value="${s.color.slice(1).toUpperCase()}" maxlength="6" class="mf-input mf-hex" aria-label="Kode warna stop ${i+1}"><label class="mf-number mf-combo mf-inline-combo"><span class="mf-control"><input data-k="stopPos" type="number" min="0" max="100" step="1" class="mf-input" value="${s.pos}" aria-label="Posisi stop ${i+1}"><span class="mf-suffix">%</span></span></label><button type="button" data-action="remove-stop" class="mf-icon-btn" title="Hapus stop" aria-label="Hapus stop" ${stops.length<=2?'disabled':''}>${I('minus',14)}</button></div>`).join('');
+	const stopRows=stops.map((s,i)=>`<div class="mf-paint-row" data-stop="${i}"><button type="button" class="mf-color checker" data-color-picker="paint" data-kind="${kind}" data-index="${index}" data-color-key="stopColor" data-stop-index="${i}" data-color="${s.color}" style="background-color:${s.color}" title="Pilih warna stop" aria-label="Warna stop ${i+1}"></button><input data-k="stopHex" value="${s.color.slice(1).toUpperCase()}" maxlength="6" class="mf-input mf-hex" aria-label="Kode warna stop ${i+1}"><label class="mf-number mf-combo mf-inline-combo"><span class="mf-control"><input data-k="stopPos" type="number" min="0" max="100" step="1" class="mf-input" value="${s.pos}" aria-label="Posisi stop ${i+1}"><span class="mf-suffix">%</span></span></label><button type="button" data-action="remove-stop" class="mf-icon-btn" title="Hapus stop" aria-label="Hapus stop" ${stops.length<=2?'disabled':''}>${I('minus',14)}</button></div>`).join('');
 	return `<div class="mf-card space-y-2" data-kind="${kind}" data-index="${index}">
-		<div class="mf-paint-row"><label class="mf-color" title="Pilih warna"><input data-k="color" type="color" value="${color}" aria-label="Pilih warna"></label><input data-k="hex" value="${color.slice(1).toUpperCase()}" maxlength="6" class="mf-input mf-hex w-8" aria-label="Kode warna"><span data-start-label class="mf-paint-label">${gradient?'Awal':'Warna'}</span>
+		<div class="mf-paint-row"><button type="button" class="mf-color" data-color-picker="paint" data-kind="${kind}" data-index="${index}" data-color-key="color" data-color="${color}" data-stop-index="${gradient?0:''}" style="background-color:${color}" title="Pilih warna" aria-label="Pilih warna"></button><input data-k="hex" value="${color.slice(1).toUpperCase()}" maxlength="6" class="mf-input mf-hex w-8" aria-label="Kode warna"><span data-start-label class="mf-paint-label">${gradient?'Awal':'Warna'}</span>
 		${paintCombo('opacity',POP_VALUES,0,100,1,'%')}<button type="button" data-action="visible" class="mf-icon-btn" title="Sembunyikan" aria-label="Sembunyikan">${I(p.visible===false?'eyeoff':'eye',14)}</button><button type="button" data-action="delete" class="mf-icon-btn" title="Hapus" aria-label="Hapus">${I('minus',14)}</button></div>
-		<label class="flex items-center gap-2"><span class="mf-label">${stroke?'Jenis':'Jenis isi'}</span>${paintSelect('type',typeItems)}</label><button type="button" data-action="pick" class="mf-icon-btn" title="Pipet warna" aria-label="Pipet warna">${I('drop',14)}</button>
+		<label class="flex items-center gap-2"><span class="mf-label">${stroke?'Jenis':'Jenis isi'}</span>${paintSelect('type',typeItems)}</label>
 		<div data-gradient class="${gradient?'':'hidden'} space-y-2">
 			<div data-gradient-preview role="img" aria-label="Pratinjau gradien" class="h-7 rounded border border-white/20" style="${gradient?`background:${gradientPreview(p)}`:''}"></div>
 			<div data-stop-list class="space-y-1">${stopRows}</div><button type="button" data-action="add-stop" class="mf-icon-btn" title="Tambah stop" aria-label="Tambah stop" ${stops.length>=8?'disabled':''}>${I('plus',14)}</button>
@@ -302,7 +301,7 @@ function renderPaint(kind){
 		card.find('[data-action="visible"]').html(I(p.visible===false?'eyeoff':'eye',14)).toggleClass('on',p.visible===false);
 		const stops=paintStops(p);card.find('[data-stop]').each(function(){
 			const j=+this.dataset.stop,stop=stops[j];if(!stop)return;
-			[['stopColor',stop.color],['stopHex',stop.color.slice(1).toUpperCase()],['stopPos',stop.pos]].forEach(([key,value])=>{
+			[['stopHex',stop.color.slice(1).toUpperCase()],['stopPos',stop.pos]].forEach(([key,value])=>{
 				const input=$(this).find(`[data-k="${key}"]`)[0];if(input&&document.activeElement!==input)input.value=String(value);
 			});
 			syncSwatch($(this),'stopColor',stop.color,cl(p.opacity,0,100,100));
@@ -483,20 +482,9 @@ MF.init.push(function initPanel(){
 		if(action==='remove-stop'){removeGradientStop(kind,index,+$(this).closest('[data-stop]').attr('data-stop'));return;}
 		if(action==='delete'){removePaint(kind,index);return;}
 		if(action==='visible'){setPaintValue(kind,index,'visible',p.visible===false);refresh();return;}
-		colorPick={kind,index};note('Pipet aktif — klik warna di kanvas untuk mengambilnya.');
 	});
 	let paletteTarget={kind:'fill',index:0};
 	$('#frow,#srow').on('focusin','[data-k]',function(){const $c=$(this).closest('[data-kind]');paletteTarget={kind:$c.attr('data-kind'),index:+$c.attr('data-index')};});
 	$('#paletteList').on('click','[data-color]',function(){setPaintValue(paletteTarget.kind,paletteTarget.index,'color',$(this).attr('data-color'));refresh();});
-	MF.down.push({p:1,fn:(e,c)=>{
-		if(!colorPick)return false;
-		try{
-			const d=ctx.getImageData(Math.floor(c.sx*dpr),Math.floor(c.sy*dpr),1,1).data;
-			if(d[3]===0){note('Piksel yang dipilih transparan; pilih warna lain.');return true;}
-			const color='#'+[d[0],d[1],d[2]].map(v=>v.toString(16).padStart(2,'0')).join(''),pick=colorPick;colorPick=null;
-			setPaintValue(pick.kind,pick.index,'color',color);refresh();note('Warna diambil: '+color);
-		}catch(e){colorPick=null;note('Tidak dapat mengambil warna dari kanvas: '+e.message);}
-		return true;
-	}});
 	$('#pexp').on('change',()=>each(s=>{s.exp=chk('#pexp');}));
 });

@@ -1,4 +1,4 @@
-# MiniFigma — Dokumentasi Proyek
+# Mini Vector — Dokumentasi Proyek
 
 > Dokumen ini ditulis agar AI (atau developer) lain bisa langsung melanjutkan proyek tanpa bertanya dari nol.
 > Dokumen ini berada di `docs/DOKUMENTASI.md` dalam repo. Untuk GitHub Copilot: buka workspace proyek, lampirkan
@@ -9,7 +9,7 @@
 ## 0. PROMPT PEMBUKA (salin-tempel ke AI baru)
 
 ```
-Kamu akan melanjutkan proyek "MiniFigma": editor desain vektor mirip Figma
+Kamu akan melanjutkan proyek "Mini Vector": editor desain vektor mirip Figma
 yang berjalan di browser, memakai <canvas> 2D. Struktur proyek terdiri dari
 index.html, library lokal di lib/, dan JavaScript per kelompok fitur di js/.
 Dokumentasi proyek berada di docs/DOKUMENTASI.md.
@@ -50,7 +50,7 @@ TUGAS SAYA SEKARANG: <tulis tugasnya di sini, mis. "Kerjakan Fase 0 Frame (Bagia
 
 | Item | Isi |
 |---|---|
-| Nama | MiniFigma — Editor Vektor Offline |
+| Nama | Mini Vector — Editor Vektor Offline |
 | Bahasa UI | Indonesia |
 | Bentuk | `index.html` + JavaScript terpisah per kelompok fitur |
 | Render | Canvas 2D (bukan SVG/DOM) |
@@ -213,7 +213,7 @@ Properti tambahan untuk Frame (`fid`, constraints, auto layout, layout grid, dst
 
 ```json
 {
-  "app": "MiniFigma",
+  "app": "Mini Vector",
   "version": 8,
   "name": "Tanpa judul",
   "view": { "x": 200, "y": 120, "zoom": 1 },
@@ -729,4 +729,4 @@ Di akhir tulis: (a) butir Bagian 6 yang berubah status, (b) fungsi yang diubah a
 
 ---
 
-*Dokumen diperbarui berdasarkan kode MiniFigma (format JSON v8). Bagian 12 ditambahkan untuk GitHub Copilot dan pengerjaan Frame.*
+*Dokumen diperbarui berdasarkan kode Mini Vector (format JSON v8). Bagian 12 ditambahkan untuk GitHub Copilot dan pengerjaan Frame.*

@@ -163,7 +163,7 @@ function des(l){
 	return s;
 }
 function fromJSON(d){
-	if(!d||typeof d!=='object'||!Array.isArray(d.layers))throw new Error('Bukan file MiniFigma: properti "layers" tidak ditemukan.');
+	if(!d||typeof d!=='object'||!Array.isArray(d.layers))throw new Error('Bukan file Mini Vector: properti "layers" tidak ditemukan.');
 	const from=Math.floor(num(d.version,1));d=migrate(d);const keep=uid,items=[],groups={};let skipped=0,gc=0;
 	const walk=(a,dep,pg,hid,lock)=>a.forEach(l=>{
 		if(l&&(l.type==='group'||l.type==='grup')&&dep<20){const id=++gc;groups[id]={id,name:typeof l.name==='string'&&l.name.trim()?l.name.trim().slice(0,80):'Grup '+id,pid:pg,c:!!l.collapsed};walk(Array.isArray(l.children)?l.children:[],dep+1,id,hid||l.visible===false,lock||!!l.locked);return;}
@@ -191,7 +191,7 @@ function fromJSON(d){
 	const loadedGuides=Array.isArray(d.guides)?d.guides.filter(g=>g&&['x','y'].includes(g.v)&&Number.isFinite(+g.t)).slice(0,1000).map(g=>({v:g.v,t:+g.t})):[];
 	return {S:items.map(i=>i[0]),GR:groups,GN:gc+1,skipped,from,name:typeof d.name==='string'&&d.name.trim()?d.name.trim().slice(0,100):'Tanpa judul',view:d.view,settings:d.settings,guides:loadedGuides};
 }
-const toJSON=()=>({app:'MiniFigma',version:FMT_VERSION,name:projName,view:{x:rd(V.x),y:rd(V.y),zoom:Math.round(V.z*1000)/1000},settings:{grid:chk('#cg'),snap_grid:chk('#mg'),snap_objects:chk('#mo')},guides:guides.map(g=>({v:g.v,t:rd(g.t)})),layers:tree(S,0,0)});
+const toJSON=()=>({app:'Mini Vector',version:FMT_VERSION,name:projName,view:{x:rd(V.x),y:rd(V.y),zoom:Math.round(V.z*1000)/1000},settings:{grid:chk('#cg'),snap_grid:chk('#mg'),snap_objects:chk('#mo')},guides:guides.map(g=>({v:g.v,t:rd(g.t)})),layers:tree(S,0,0)});
 function applyProject(r){
 	S=r.S;GR=r.GR||{};gn=r.GN||1;guides=r.guides||[];normalize();projName=r.name;$('#pname').val(projName);
 	const v=r.view;if(v&&isFinite(+v.x)&&isFinite(+v.y)&&+v.zoom>0)V={x:+v.x,y:+v.y,z:Math.min(32,Math.max(.05,+v.zoom))};
@@ -283,7 +283,7 @@ async function buildExportBlob(scope,frameId,format,scale){
 	if(format==='pdf'){
 		const jpeg=await exportCanvasBlob(canvas,'image/jpeg',.92),data=new Uint8Array(await jpeg.arrayBuffer()),enc=new TextEncoder(),parts=[],offsets=[0];let length=0;
 		const push=part=>{parts.push(part);length+=part.length;},text=value=>enc.encode(value);
-		push(text('%PDF-1.4\n%MiniFigma\n'));
+		push(text('%PDF-1.4\n%Mini Vector\n'));
 		const object=(id,head,stream)=>{offsets[id]=length;push(text(`${id} 0 obj\n${head}`));if(stream){push(text('\nstream\n'));push(stream);push(text('\nendstream'));}push(text('\nendobj\n'));};
 		const content=text(`q\n${w} 0 0 ${h} 0 0 cm\n/Im0 Do\nQ\n`);
 		object(1,'<< /Type /Catalog /Pages 2 0 R >>');

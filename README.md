@@ -1,4 +1,4 @@
-# Instruksi untuk GitHub Copilot — MiniFigma
+# Instruksi untuk GitHub Copilot — Mini Vector
 
 Proyek: editor desain vektor mirip Figma. Canvas 2D, jQuery dan Tailwind lokal (`lib/`), JavaScript per kelompok fitur di `js/`.
 Harus berjalan OFFLINE dengan klik ganda `index.html` (file://), target laptop spek rendah.

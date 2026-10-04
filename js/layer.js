@@ -1,8 +1,10 @@
 /* [6.5] Layer dan grup. Isi: perintah grup, panel layer, urutan, rename. Bukan di sini: state grup bersama atau properti kanan. */
 function groupSel(){
-	const a=selAll();if(a.length<2)return;const units=[],seen=new Set();
-	a.forEach(s=>{let u={s},g=s.gid||0;while(g&&leavesOf(g).every(x=>a.includes(x))){u={g};g=gpid(g);}const key=u.g?'g'+u.g:'s'+s.id;if(!seen.has(key)){seen.add(key);units.push(u);}});
-	const pids=new Set(units.map(u=>u.g?gpid(u.g):(u.s.gid||0))),id=gn++;GR[id]={id,name:'Grup '+id,pid:pids.size===1?[...pids][0]:0};
+	const a=selAll();if(a.length<2)return;const selected=new Set(a),units=[],seen=new Set();
+	a.forEach(s=>{let u={s},g=s.gid||0;while(g&&leavesOf(g).every(x=>selected.has(x))){u={g};g=gpid(g);}const key=u.g?'g'+u.g:'s'+s.id;if(!seen.has(key)){seen.add(key);units.push(u);}});
+	if(units.length<2)return;
+	const chains=units.map(u=>{const out=[];let g=u.g?gpid(u.g):(u.s.gid||0);while(g){out.push(g);g=gpid(g);}return out;}),pid=chains[0].find(g=>chains.every(c=>c.includes(g)))||0,id=newGid();
+	GR[id]={id,name:'Grup '+id,pid};
 	units.forEach(u=>{if(u.g)GR[u.g].pid=id;else u.s.gid=id;});
 	const mem=S.filter(x=>inGroup(x,id)),top=Math.max(...mem.map(x=>S.indexOf(x))),ix=S.slice(0,top+1).filter(x=>!mem.includes(x)).length;
 	S=S.filter(x=>!mem.includes(x));S.splice(ix,0,...mem);normalize();setSel(mem);refresh();save();

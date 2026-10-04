@@ -98,7 +98,15 @@ function finishTextEdit(commit){
 	else fitText(layer);
 	editingText=null;$('#textedit').hide();refresh();if(commit&&text!==original&&(!isNew||text.trim()))save();
 }
+let textGesture=null;
 const fontPayload=data=>data.replace(/^data:font\/ttf;base64,/i,'');
+function captureTextGesture(e){
+	if(editingText)return;
+	const [wx,wy]=s2w(e.offsetX,e.offsetY),target=pickAt(wx,wy,e),hit=target&&target.hit,now=Date.now();
+	if(!hit||hit.type!=='text'){textGesture=null;return;}
+	if(textGesture&&textGesture.hit===hit&&now-textGesture.last<500&&Math.hypot(e.offsetX-textGesture.x,e.offsetY-textGesture.y)<6){textGesture.last=now;return;}
+	textGesture={hit,items:target.items.slice(),selectedBefore:selAll().length===1&&selAll()[0]===hit,groupSelectedBefore:!!selG&&selAll().length>1,last:now,x:e.offsetX,y:e.offsetY};
+}
 function fromBase64(s){const raw=atob(s),bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);return bytes;}
 function toBase64(bytes){let raw='';for(let i=0;i<bytes.length;i+=0x8000)raw+=String.fromCharCode(...bytes.subarray(i,i+0x8000));return btoa(raw);}
 async function activateFont(font){const face=new FontFace(font.name,fromBase64(fontPayload(font.data)));await face.load();document.fonts.add(face);fontFaces.set(font.name,face);}
@@ -145,9 +153,13 @@ async function addFontFiles(files){
 	}
 }
 MF.init.push(function initText(){
+	cv.addEventListener('mousedown',captureTextGesture,true);
+	MF.down.push({p:0,fn(){
+		if(!editingText)return false;const layer=editingText.layer;finishTextEdit(true);setSel([layer]);refresh();return true;
+	}});
 	MF.down.push({p:30,fn(e,c){
 		if(tool!=='text')return false;const target=pickAt(c.wx,c.wy,e);
-		if(target&&target.hit.type==='text'){setSel(target.items);refresh();startTextEdit(target.hit);return true;}
+		if(target&&target.hit.type==='text'){textGesture=null;setSel([target.hit]);refresh();startTextEdit(target.hit);return true;}
 		const [wx,wy]=snapPt(c.wx,c.wy),s=mk('text',wx,wy);s.text='';setSel([s]);S.push(s);drag={k:'textCreate',s,sx:wx,sy:wy,screenX:c.sx,screenY:c.sy};refresh();return true;
 	}});
 	MF.move.textCreate=(e,c)=>{
@@ -162,9 +174,18 @@ MF.init.push(function initText(){
 	$('#textedit').on('input',function(){if(!editingText)return;editingText.layer.text=this.value;fitText(editingText.layer);positionTextEditor();draw();}).on('keydown',e=>{
 		e.stopPropagation();if(e.key==='Escape'){e.preventDefault();finishTextEdit(true);}
 	}).on('blur',()=>finishTextEdit(true));
+	MF.keys.push((e,k)=>{
+		if(k!=='enter'||editingText)return false;const selected=selAll();
+		if(selected.length===1&&selected[0].type==='text'){e.preventDefault();startTextEdit(selected[0]);return true;}
+		return false;
+	});
 	$(cv).on('dblclick',e=>{
 		const [wx,wy]=s2w(e.offsetX,e.offsetY),target=pickAt(wx,wy,e.originalEvent||e);
-		if(target&&target.hit.type==='text'){setSel(target.items);refresh();startTextEdit(target.hit);}
+		if(target&&target.hit.type==='text'){
+			const gesture=textGesture;textGesture=null;
+			if(gesture&&gesture.hit===target.hit&&gesture.selectedBefore){startTextEdit(target.hit);return;}
+			const selection=gesture&&gesture.hit===target.hit?(gesture.groupSelectedBefore?[target.hit]:gesture.items):target.items;setSel(selection);refresh();
+		}
 	});
 	$('#fontmanage').on('click',()=>{renderFontLibrary();$('#fontdlg')[0].showModal();});$('#fontclose').on('click',()=>$('#fontdlg')[0].close());
 	$('#fontupload').on('click',()=>$('#fontfile').trigger('click'));$('#fontfile').on('change',function(){const files=[...this.files];this.value='';if(files.length)addFontFiles(files);});

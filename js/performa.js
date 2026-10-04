@@ -12,6 +12,7 @@ function restore(str){
 	if(document.activeElement&&document.activeElement.closest('#props'))document.activeElement.blur();
 	if(svT){clearTimeout(svT);svT=null;}
 	const d=JSON.parse(str),ids=selAll().map(x=>x.id);S=d.S;uid=d.uid;GR=d.GR||{};gn=d.gn||1;guides=Array.isArray(d.guides)?d.guides:[];draft=null;
+	reportIdRepairs(ensureUniqueIds());normalize();
 	setSel(S.filter(x=>ids.includes(x.id)));refresh();persist();updHist();
 }
 function undo(){if(draft)return;flush();if(hp>0){hp--;restore(hist[hp]);}}

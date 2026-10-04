@@ -71,11 +71,11 @@ function parseClipboardText(text){
 function pasteData(data,inPlace=false,atPoint=null,targetClip=null){
 	if(!clipboardDataValid(data))return false;
 	flush();
-	const oldUid=uid;let sources;
-	try{sources=data.items.map(layer=>des(layer));}catch(e){uid=oldUid;return false;}
-	if(sources.some(s=>!s)){uid=oldUid;return false;}
+	const oldUid=uid,oldGn=gn;let sources;
+	try{sources=data.items.map(layer=>des(layer));}catch(e){uid=oldUid;gn=oldGn;return false;}
+	if(sources.some(s=>!s)){uid=oldUid;gn=oldGn;return false;}
 	const ids=new Map(data.items.map((layer,i)=>[layer.id,sources[i].id])),gm=new Map();
-	data.groups.forEach(g=>gm.set(g.id,gn++));
+	data.groups.forEach(g=>gm.set(g.id,newGid()));
 	data.groups.forEach(g=>{const id=gm.get(g.id);GR[id]={id,name:g.name,pid:gm.get(g.pid)||0,c:!!g.c};});
 	const sourceBounds=ubox(sources),origin=data.origin||{x:sourceBounds.x,y:sourceBounds.y};
 	let dx=0,dy=0;
@@ -87,7 +87,7 @@ function pasteData(data,inPlace=false,atPoint=null,targetClip=null){
 		s.fid=ids.get(sourceFid)||(S.some(parent=>parent.id===sourceFid&&parent.type==='frame')?sourceFid:0);
 		move(s,dx,dy);return s;
 	});
-	S.push(...copies);normalize();setSel(copies);refresh();saveClipboardStep();return true;
+	S.push(...copies);reportIdRepairs(ensureUniqueIds());normalize();setSel(copies);refresh();saveClipboardStep();return true;
 }
 function doPaste(inPlace=false,atPoint=null){
 	if(!clip||!clipboardDataValid(clip.data))return false;

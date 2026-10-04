@@ -82,7 +82,7 @@ function frameToGroup(){
 	if(!sel||sel.type!=='frame')return;
 	const frame=sel,outer=frameParentOf(frame),direct=S.filter(s=>frameParentOf(s)===frame);
 	if(!direct.length){note('Frame ini tidak memiliki isi untuk dijadikan grup.');return;}
-	const id=gn++,existing=direct.map(s=>s.gid||0);
+	const id=newGid(),existing=direct.map(s=>s.gid||0);
 	const pid=existing.every(g=>g===existing[0])?existing[0]:0;
 	GR[id]={id,name:frame.name.replace(/^Frame/,'Grup').trim()||'Grup '+id,pid};
 	const groups=new Set(existing.filter(Boolean));

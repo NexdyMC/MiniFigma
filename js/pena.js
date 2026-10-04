@@ -33,14 +33,12 @@ MF.init.push(function initPen(){
 	$(cv).on('dblclick',e=>{
 		const sx=e.offsetX,sy=e.offsetY,[wx,wy]=s2w(sx,sy);
 		if(draft){draft.pts.pop();finishPen();return;}
-		let topHit=null;for(let i=S.length-1;i>=0;i--)if(hit(S[i],wx,wy)){topHit=S[i];break;}
-		if(topHit&&topHit.type==='text'){setSel([topHit]);refresh();startTextEdit(topHit);return;}
 		if(sel&&sel.type==='path'){
 			const i=sel.pts.findIndex(p=>{const q=w2s(...rp(sel,p.x,p.y));return Math.hypot(q[0]-sx,q[1]-sy)<8;});
 			if(i>=0){togglePt(sel,i);selPt=i;draw();save();return;}
 		}
 		if(selG){let h=null;for(let i=S.length-1;i>=0;i--)if(hit(S[i],wx,wy)){h=S[i];break;}
-			if(h&&inGroup(h,selG)){const c=childOf(h,selG);setSel(c?leavesOf(c):[h]);refresh();}
+			if(h&&h.type!=='text'&&inGroup(h,selG)){const c=childOf(h,selG);setSel(c?leavesOf(c):[h]);refresh();}
 		}
 	});
 });

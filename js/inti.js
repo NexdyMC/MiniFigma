@@ -42,6 +42,60 @@ const gpid=g=>(GR[g]&&GR[g].pid)||0;
 function inGroup(s,g){let c=s.gid||0;while(c){if(c===g)return true;c=gpid(c);}return false;}
 function groupIn(g,anc){let c=gpid(g);while(c){if(c===anc)return true;c=gpid(c);}return false;}
 const leavesOf=g=>S.filter(s=>inGroup(s,g));
+function maxDocumentId(state){
+	let max=0;(state.S||[]).forEach(s=>{if(s&&Number.isSafeInteger(s.id)&&s.id>max)max=s.id;});
+	Object.keys(state.GR||{}).forEach(k=>{const id=+k;if(Number.isSafeInteger(id)&&id>max)max=id;});
+	Object.values(state.GR||{}).forEach(g=>{if(g&&Number.isSafeInteger(g.id)&&g.id>max)max=g.id;});return max;
+}
+// uid dan gn kompatibel dengan snapshot, tetapi alokasi objek dan grup memakai satu ruang ID.
+function allocDocumentId(state){
+	const target=state||{S,GR,uid,gn},n=Math.max(Number.isSafeInteger(target.uid)&&target.uid>0?target.uid:1,Number.isSafeInteger(target.gn)&&target.gn>0?target.gn:1,maxDocumentId(target)+1);
+	if(!Number.isSafeInteger(n)||n>=Number.MAX_SAFE_INTEGER)throw new RangeError('Tidak dapat membuat ID unik baru.');
+	target.uid=n+1;target.gn=n+1;if(!state){uid=target.uid;gn=target.gn;}return n;
+}
+function newId(state){return allocDocumentId(state);}
+function newGid(state){return allocDocumentId(state);}
+function ensureUniqueIds(state){
+	const target=state||{S,GR,uid,gn},items=Array.isArray(target.S)?target.S:[],groups=target.GR&&typeof target.GR==='object'?target.GR:{};
+	let repaired=0;const objectIds=new Set();
+	items.forEach(s=>{
+		if(!s||typeof s!=='object')return;
+		if(!Number.isSafeInteger(s.id)||s.id<1||objectIds.has(s.id)){s.id=newId(target);repaired++;}
+		objectIds.add(s.id);
+	});
+	const remap=new Map(),groupIds=new Set(),rebuilt={};
+	Object.keys(groups).forEach(key=>{
+		const old=+key,g=groups[key]&&typeof groups[key]==='object'?groups[key]:{pid:0},valid=Number.isSafeInteger(old)&&old>0;
+		let id=valid?old:0;if(!id||objectIds.has(id)||groupIds.has(id))id=newGid(target);
+		if(valid&&!remap.has(old))remap.set(old,id);
+		if(g.id!==id||!valid||groups[key]!==g)repaired++;
+		g.id=id;rebuilt[id]=g;groupIds.add(id);
+	});
+	target.GR=rebuilt;
+	items.forEach(s=>{
+		if(!s||typeof s!=='object')return;
+		const old=Number.isSafeInteger(s.gid)?s.gid:0,id=old?(remap.get(old)||old):0;
+		s.gid=groupIds.has(id)?id:0;if(old!==s.gid)repaired++;
+	});
+	Object.values(rebuilt).forEach(g=>{
+		const old=Number.isSafeInteger(g.pid)?g.pid:0,id=old?(remap.get(old)||old):0;
+		g.pid=groupIds.has(id)?id:0;if(old!==g.pid)repaired++;
+	});
+	Object.keys(rebuilt).forEach(key=>{
+		const seen=new Set();let id=+key;
+		while(id&&rebuilt[id]){
+			if(seen.has(id)){rebuilt[key].pid=0;repaired++;break;}
+			seen.add(id);id=rebuilt[id].pid||0;
+		}
+	});
+	const next=maxDocumentId(target)+1;
+	if(!Number.isSafeInteger(next))throw new RangeError('Rentang ID proyek sudah habis.');
+	target.uid=Math.max(Number.isSafeInteger(target.uid)&&target.uid>0?target.uid:1,next);
+	target.gn=Math.max(Number.isSafeInteger(target.gn)&&target.gn>0?target.gn:1,next);
+	if(!state){S=items;GR=rebuilt;uid=target.uid;gn=target.gn;}
+	return repaired;
+}
+function reportIdRepairs(count){if(count)note('ID/referensi grup diperbaiki ('+count+').');}
 function childOf(s,g){let c=s.gid||0;if(c===g)return null;while(c&&gpid(c)!==g)c=gpid(c);return c||null;}
 function rootOf(s){let c=s.gid||0;while(c&&gpid(c))c=gpid(c);return c;}
 function inferG(a){let g=a[0].gid||0,best=0;while(g){const L=leavesOf(g);if(L.length===a.length&&L.every(x=>a.includes(x)))best=g;g=gpid(g);}return best;}
@@ -91,7 +145,7 @@ function flat(s){
 	return out;
 }
 function mk(type,x,y){
-	const id=uid++,s={id,type,x,y,w:0,h:0,r:0,smooth:0,fid:0,rot:0,clipContent:true,n:type==='star'?5:3,pts:[],closed:false,text:'Teks',ff:'Inter',fw:400,fi:false,fs:16,lh:null,ls:0,ta:'l',va:'top',tm:'aw',td:'none',tc:'none',fillOn:true,fill:'#d9d9d9',stroke:'#d9d9d9',sw:0,name:NAME[type]+' '+id};
+	const id=newId(),s={id,type,x,y,w:0,h:0,r:0,smooth:0,fid:0,rot:0,clipContent:true,n:type==='star'?5:3,pts:[],closed:false,text:'Teks',ff:'Inter',fw:400,fi:false,fs:16,lh:null,ls:0,ta:'l',va:'top',tm:'aw',td:'none',tc:'none',fillOn:true,fill:'#d9d9d9',stroke:'#d9d9d9',sw:0,name:NAME[type]+' '+id};
 	if(type==='frame')s.fill='#ffffff';if(type==='path'){s.fillOn=false;s.sw=2;}return s;
 }
 function getPaintLayers(s,kind){

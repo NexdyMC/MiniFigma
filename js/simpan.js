@@ -61,7 +61,7 @@ const MIGRATE={1:d=>d,2:d=>d,3:d=>d,4:d=>d,5:d=>d,6:d=>d,7:d=>d,8:migrateV8Frame
 function migrate(d){let v=Math.floor(num(d.version,1));d={...d};while(v<FMT_VERSION){if(MIGRATE[v])d=MIGRATE[v](d);v++;}d.version=FMT_VERSION;return d;}
 function tree(L,g,fid=0){
 	const out=[],seen=new Set();
-	const scope=L.filter(s=>(frameParentOf(s)?frameParentOf(s).id:0)===fid);
+	const scope=L.filter(s=>(frameParentOf(s)?frameParentOf(s).id:0)===fid&&(!g||inGroup(s,g)));
 	scope.forEach(s=>{
 		const c=childOf(s,g);
 		if(c==null)out.push(ser(s));
@@ -164,15 +164,26 @@ function des(l){
 }
 function fromJSON(d){
 	if(!d||typeof d!=='object'||!Array.isArray(d.layers))throw new Error('Bukan file Mini Vector: properti "layers" tidak ditemukan.');
-	const from=Math.floor(num(d.version,1));d=migrate(d);const keep=uid,items=[],groups={};let skipped=0,gc=0;
+	const from=Math.floor(num(d.version,1));d=migrate(d);const keepUid=uid,keepGn=gn,items=[],groups={};let skipped=0,idRepairs=0;
+	const incoming=[];
+	function reserveIds(layers,dep=0){
+		(Array.isArray(layers)?layers:[]).forEach(l=>{
+			if(!l||typeof l!=='object')return;
+			if((l.type==='group'||l.type==='grup')&&dep<20){reserveIds(l.children,dep+1);return;}
+			if(Number.isSafeInteger(l.id)&&l.id>0)incoming.push({id:l.id});
+			if(l.type==='frame'&&dep<20)reserveIds(l.children,dep+1);
+		});
+	}
+	reserveIds(d.layers);const groupState={S:[...S,...incoming],GR:groups,uid,gn};
 	const walk=(a,dep,pg,hid,lock)=>a.forEach(l=>{
-		if(l&&(l.type==='group'||l.type==='grup')&&dep<20){const id=++gc;groups[id]={id,name:typeof l.name==='string'&&l.name.trim()?l.name.trim().slice(0,80):'Grup '+id,pid:pg,c:!!l.collapsed};walk(Array.isArray(l.children)?l.children:[],dep+1,id,hid||l.visible===false,lock||!!l.locked);return;}
+		if(l&&(l.type==='group'||l.type==='grup')&&dep<20){const id=newGid(groupState);groups[id]={id,name:typeof l.name==='string'&&l.name.trim()?l.name.trim().slice(0,80):'Grup '+id,pid:pg,c:!!l.collapsed};walk(Array.isArray(l.children)?l.children:[],dep+1,id,hid||l.visible===false,lock||!!l.locked);return;}
 		const s=des(l);if(!s){skipped++;return;}s.gid=pg;if(hid)s.hid=true;if(lock)s.lock=true;s.c=!!l.collapsed;items.push([s,l.id,l.fid]);
 		if(s.type==='frame'&&dep<20)walk(Array.isArray(l.children)?l.children:[],dep+1,pg,hid||l.visible===false,lock||!!l.locked);
 	});
-	try{walk(d.layers,0,0,false,false);}catch(e){uid=keep;throw e;}
-	const used=new Set();items.forEach(([s,w])=>{if(Number.isInteger(w)&&w>0&&!used.has(w)){s.id=w;used.add(w);}else s.id=0;});
-	let nx=Math.max(0,...used)+1;items.forEach(([s])=>{if(!s.id)s.id=nx++;});
+	try{walk(d.layers,0,0,false,false);}catch(e){uid=keepUid;gn=keepGn;throw e;}
+	const used=new Set();items.forEach(([s,w])=>{if(Number.isInteger(w)&&w>0&&!used.has(w)){s.id=w;used.add(w);}else{s.id=0;idRepairs++;}});
+	const idState={S:items.map(([s])=>s),GR:groups,uid:Math.max(uid,groupState.uid),gn:Math.max(gn,groupState.gn)};
+	items.forEach(([s])=>{if(!s.id){s.id=newId(idState);idRepairs++;}});
 	const byId=new Map(items.map(([s])=>[s.id,s]));
 	items.forEach(([s,,parentId])=>{
 		if(!Number.isInteger(parentId)){delete s.fid;return;}
@@ -187,19 +198,21 @@ function fromJSON(d){
 		}
 		if(!valid)s.fid=0;
 	});
-	uid=nx;
 	const loadedGuides=Array.isArray(d.guides)?d.guides.filter(g=>g&&['x','y'].includes(g.v)&&Number.isFinite(+g.t)).slice(0,1000).map(g=>({v:g.v,t:+g.t})):[];
-	return {S:items.map(i=>i[0]),GR:groups,GN:gc+1,skipped,from,name:typeof d.name==='string'&&d.name.trim()?d.name.trim().slice(0,100):'Tanpa judul',view:d.view,settings:d.settings,guides:loadedGuides};
+	const result={S:items.map(i=>i[0]),GR:groups,UID:idState.uid,GN:idState.gn,skipped,from,name:typeof d.name==='string'&&d.name.trim()?d.name.trim().slice(0,100):'Tanpa judul',view:d.view,settings:d.settings,guides:loadedGuides};
+	result.idRepairs=idRepairs+ensureUniqueIds(result);return result;
 }
 const toJSON=()=>({app:'Mini Vector',version:FMT_VERSION,name:projName,view:{x:rd(V.x),y:rd(V.y),zoom:Math.round(V.z*1000)/1000},settings:{grid:chk('#cg'),snap_grid:chk('#mg'),snap_objects:chk('#mo')},guides:guides.map(g=>({v:g.v,t:rd(g.t)})),layers:tree(S,0,0)});
 function applyProject(r){
-	S=r.S;GR=r.GR||{};gn=r.GN||1;guides=r.guides||[];normalize();projName=r.name;$('#pname').val(projName);
+	S=r.S;GR=r.GR||{};uid=r.UID||1;gn=r.GN||1;guides=r.guides||[];const repaired=(r.idRepairs||0)+ensureUniqueIds();reportIdRepairs(repaired);normalize();projName=r.name;$('#pname').val(projName);
 	const v=r.view;if(v&&isFinite(+v.x)&&isFinite(+v.y)&&+v.zoom>0)V={x:+v.x,y:+v.y,z:Math.min(32,Math.max(.05,+v.zoom))};
-	const g=r.settings;if(g&&typeof g==='object'){if('grid' in g)$('#cg').prop('checked',!!g.grid);if('snap_grid' in g)$('#mg').prop('checked',!!g.snap_grid);if('snap_objects' in g)$('#mo').prop('checked',!!g.snap_objects);}setSel([]);
+	const g=r.settings;if(g&&typeof g==='object'){if('grid' in g)$('#cg').prop('checked',!!g.grid);if('snap_grid' in g)$('#mg').prop('checked',!!g.snap_grid);if('snap_objects' in g)$('#mo').prop('checked',!!g.snap_objects);}setSel([]);return repaired;
 }
 function load(){
-	try{const raw=localStorage.getItem(LS_KEY);if(raw){applyProject(fromJSON(JSON.parse(raw)));return;}}catch(e){}
-	try{const d=JSON.parse(localStorage.getItem('minifigma2'));if(d&&Array.isArray(d.S)){S=d.S;uid=d.uid||S.length+1;}}catch(e){}
+	try{const raw=localStorage.getItem(LS_KEY);if(raw){applyProject(fromJSON(JSON.parse(raw)));return;}}catch(e){note('Autosave tidak dapat dibuka: '+e.message);}
+	try{const d=JSON.parse(localStorage.getItem('minifigma2'));if(d&&Array.isArray(d.S)){S=d.S;uid=d.uid||S.length+1;GR=d.GR||{};gn=d.gn||1;guides=d.guides||[];}}
+	catch(e){note('Data proyek lama tidak dapat dipulihkan: '+e.message);}
+	reportIdRepairs(ensureUniqueIds());normalize();
 }
 function exportDescendants(frame){
 	const out=[frame],seen=new Set([frame.id]);
@@ -326,12 +339,12 @@ MF.init.push(function initSaving(){
 	$('#jopen').on('click',()=>$('#jfile').trigger('click'));
 	$('#jfile').on('change',function(){
 		const f=this.files[0];this.value='';if(!f)return;if(f.size>10*1024*1024){note('File terlalu besar (maksimal 10 MB).');return;}
-		f.text().then(tx=>{const r=fromJSON(JSON.parse(tx));applyProject(r);refresh();save();note('Dibuka: '+r.name+' ('+r.S.length+' layer'+(r.skipped?', '+r.skipped+' dilewati':'')+')'+(r.from<FMT_VERSION?' · dimigrasi dari v'+r.from:r.from>FMT_VERSION?' · dibuat versi lebih baru (v'+r.from+'), properti baru diabaikan':''));})
+		f.text().then(tx=>{const r=fromJSON(JSON.parse(tx)),repaired=applyProject(r);refresh();save();note('Dibuka: '+r.name+' ('+r.S.length+' layer'+(r.skipped?', '+r.skipped+' dilewati':'')+')'+(r.from<FMT_VERSION?' · dimigrasi dari v'+r.from:r.from>FMT_VERSION?' · dibuat versi lebih baru (v'+r.from+'), properti baru diabaikan':'')+(repaired?' · ID diperbaiki ('+repaired+')':''));})
 			.catch(e=>note('Gagal membuka: '+(e instanceof SyntaxError?'bukan JSON yang valid.':e.message)));
 	});
 	$('#jnew').on('click',()=>{
 		if(S.length&&!confirm('Mulai proyek baru? Perubahan yang belum disimpan ke JSON akan hilang.'))return;
-		S=[];uid=1;GR={};gn=1;guides=[];projName='Tanpa judul';$('#pname').val(projName);setSel([]);refresh();save();
+		S=[];uid=1;GR={};gn=1;guides=[];reportIdRepairs(ensureUniqueIds());projName='Tanpa judul';$('#pname').val(projName);setSel([]);refresh();save();
 	});
 	$('#pname').on('input',()=>{projName=$('#pname').val();save();});
 	$('#exp').on('click',()=>{

@@ -51,23 +51,54 @@ const COLOR_BLEND_MODES=[
 class ColorPicker{
 	constructor(){
 		this.changeCb=null;this.commitCb=null;this.blendCb=null;this.anchor=null;this.current={r:217,g:217,b:217,a:1};this.hsv={h:0,s:0,v:85};this.background='#ffffff';this.contrastOn=false;this.standard='AA';this.textSize='normal';this.opened=false;this.dirty=false;this.overlayKey='';this.ignoreSampleClickUntil=0;this.sampleHandler=null;this.sampleBlocker=null;
+		this.dragState=null;this.positionMoved=false;
 		const blends=COLOR_BLEND_MODES.map(([v,label])=>`<option value="${v}">${label}</option>`).join('');
 		this.el=document.createElement('div');this.el.id='mfColorPicker';this.el.className='mf-color-picker';this.el.hidden=true;this.el.innerHTML=`<div class="mfc-head"><div class="mfc-tabs"><button type="button" class="active" data-tab="custom">Custom</button><button type="button" data-tab="libraries">Libraries</button></div><button type="button" class="mfc-icon" data-save title="Simpan warna">+</button><button type="button" class="mfc-icon" data-close title="Tutup">×</button></div><div class="mfc-body" data-view="custom"><div class="mfc-types"><button type="button" class="active" aria-label="Solid">●</button><button type="button" disabled title="Segera hadir" aria-label="Gradien">▧</button><button type="button" disabled title="Segera hadir" aria-label="Pattern">▦</button><button type="button" disabled title="Segera hadir" aria-label="Gambar">▣</button><button type="button" disabled title="Segera hadir" aria-label="Video">▶</button><button type="button" disabled title="Segera hadir" aria-label="Shader">◉</button></div><div class="mfc-paint-tools"><select data-blend aria-label="Blend mode">${blends}</select><button type="button" data-contrast-toggle aria-pressed="false" title="Periksa kontras warna" aria-label="Periksa kontras warna">◐</button></div><div class="mfc-contrast" data-contrast hidden><div class="mfc-contrast-row"><span class="mfc-contrast-swatch" data-contrast-fg title="Warna depan"></span><span>vs</span><span class="mfc-contrast-swatch" data-contrast-bg title="Warna latar"></span><strong data-contrast-ratio>1.00 : 1</strong><button type="button" data-contrast-settings title="Pengaturan kontras" aria-label="Pengaturan kontras">⚙</button></div><div class="mfc-contrast-badges"><button type="button" data-standard="AA" title="Klik untuk menyesuaikan warna ke standar AA">AA ×</button><button type="button" data-standard="AAA" title="Klik untuk menyesuaikan warna ke standar AAA">AAA ×</button></div><div class="mfc-contrast-settings" data-contrast-settings-panel hidden><label>Standar<select data-standard-select><option>AA</option><option>AAA</option></select></label><label>Teks<select data-size-select><option value="normal">Normal</option><option value="large">Besar</option></select></label><label>Latar<select data-background-select><option value="custom">Manual</option><option value="#ffffff">Putih</option><option value="#000000">Hitam</option><option value="#1e1e1e">Kanvas</option></select></label><input data-background type="color" value="#ffffff" aria-label="Warna latar manual"></div></div><div class="mfc-field-wrap"><canvas class="mfc-field" width="208" height="208" role="group" aria-roledescription="2D Slider" tabindex="0" aria-label="Saturasi dan kecerahan"></canvas><canvas class="mfc-contrast-overlay" width="208" height="208" aria-hidden="true"></canvas></div><div class="mfc-slider-row"><button type="button" data-eyedropper title="Pipet warna" aria-label="Pipet warna">⌖</button><input data-hue type="range" min="0" max="359" aria-label="Hue"></div><div class="mfc-opacity"><input data-opacity type="range" min="0" max="100" aria-label="Opasitas"></div><div class="mfc-code"><select data-format aria-label="Format warna"><option>Hex</option><option>RGB</option><option>CSS</option><option>HSL</option><option>CMYK</option></select><input data-value aria-label="Nilai warna"><input data-alpha type="number" min="0" max="100" aria-label="Opasitas persen"><span>%</span></div></div><div class="mfc-body" data-view="libraries" hidden><p>Library warna akan tersedia pada tahap berikutnya.</p></div>`;
-		document.body.appendChild(this.el);this.field=this.el.querySelector('.mfc-field');this.ctx=this.field.getContext('2d');this.overlay=this.el.querySelector('.mfc-contrast-overlay');this.overlayCtx=this.overlay.getContext('2d');const components=document.createElement('div');components.dataset.components='';components.hidden=true;this.el.querySelector('.mfc-code').insertBefore(components,this.el.querySelector('[data-value]'));this.bind();
+		document.body.appendChild(this.el);this.field=this.el.querySelector('.mfc-field');this.ctx=this.field.getContext('2d');this.overlay=this.el.querySelector('.mfc-contrast-overlay');this.overlayCtx=this.overlay.getContext('2d');const components=document.createElement('div');components.dataset.components='';components.hidden=true;this.el.querySelector('.mfc-code').insertBefore(components,this.el.querySelector('[data-value]'));this.bind();this.setupDragging();
+		const eyedropper=this.el.querySelector('[data-eyedropper]'),dropperIcon=document.createElementNS('http://www.w3.org/2000/svg','svg'),dropperPath=document.createElementNS('http://www.w3.org/2000/svg','path');
+		dropperIcon.setAttribute('width','14');dropperIcon.setAttribute('height','14');dropperIcon.setAttribute('viewBox','0 0 512 512');dropperIcon.setAttribute('fill','currentColor');dropperPath.setAttribute('d',FA.dropper);dropperIcon.appendChild(dropperPath);eyedropper.replaceChildren(dropperIcon);
+		eyedropper.title='Ambil warna dari layar, gambar, atau kanvas';eyedropper.setAttribute('aria-label','Ambil warna dari layar, gambar, atau kanvas');
 		this.el.querySelector('[data-view="libraries"]').innerHTML='<p class="mfc-library-title">Warna tersimpan</p><div class="mfc-library-grid" data-library-grid></div><p class="mfc-library-empty" data-library-empty hidden>Belum ada warna. Tekan + untuk menyimpan warna aktif.</p>';
 	}
 	onChange(cb){this.changeCb=cb;return this;}
 	onCommit(cb){this.commitCb=cb;return this;}
 	open(anchorEl,initialPaint={},options={}){
 		if(this.opened)this.finish();
-		this.anchor=anchorEl;this.changeCb=options.onChange||null;this.commitCb=options.onCommit||null;this.blendCb=options.onBlendChange||null;this.background=ColorUtils.hex(options.background||'#ffffff')||'#ffffff';const c=ColorUtils.parse(initialPaint.color||initialPaint)||{r:217,g:217,b:217,a:1};c.a=initialPaint.opacity==null?c.a:ColorUtils.clamp(initialPaint.opacity/100,0,1);this.current=c;this.hsv=ColorUtils.rgbToHsv(c.r,c.g,c.b);
+		this.anchor=anchorEl;this.positionMoved=false;this.changeCb=options.onChange||null;this.commitCb=options.onCommit||null;this.blendCb=options.onBlendChange||null;this.background=ColorUtils.hex(options.background||'#ffffff')||'#ffffff';const c=ColorUtils.parse(initialPaint.color||initialPaint)||{r:217,g:217,b:217,a:1};c.a=initialPaint.opacity==null?c.a:ColorUtils.clamp(initialPaint.opacity/100,0,1);this.current=c;this.hsv=ColorUtils.rgbToHsv(c.r,c.g,c.b);
 		this.opened=true;this.dirty=false;this.el.hidden=false;this.el.querySelector('[data-view="custom"]').hidden=false;this.el.querySelector('[data-view="libraries"]').hidden=true;this.el.querySelector('[data-tab="custom"]').classList.add('active');this.el.querySelector('[data-tab="libraries"]').classList.remove('active');this.el.querySelector('[data-blend]').value=initialPaint.blendMode||'normal';this.el.querySelector('[data-background]').value=this.background;this.render();this.position();return this;
 	}
 	close(){if(!this.opened)return;this.finish();if(this.sampleHandler)cv.removeEventListener('pointerdown',this.sampleHandler,true);if(this.sampleBlocker)cv.removeEventListener('mousedown',this.sampleBlocker,true);this.sampleHandler=this.sampleBlocker=null;this.el.hidden=true;this.opened=false;this.anchor=null;}
 	finish(){if(this.dirty&&this.commitCb)this.commitCb(this.value());this.dirty=false;}
-	destroy(){this.close();this.el.remove();$(document).off('.mfColorPicker');$(window).off('.mfColorPicker');}
+	destroy(){this.close();this.dragHandle.removeEventListener('pointerdown',this.onDragStart);window.removeEventListener('pointermove',this.onDragMove);window.removeEventListener('pointerup',this.onDragEnd);window.removeEventListener('pointercancel',this.onDragEnd);this.el.remove();$(document).off('.mfColorPicker');$(window).off('.mfColorPicker');}
 	value(){return {color:ColorUtils.hex(this.current),opacity:Math.round(this.current.a*100)};}
 	setColor(c,emit=true){this.current=ColorUtils.parse(c)||this.current;this.hsv=ColorUtils.rgbToHsv(this.current.r,this.current.g,this.current.b);this.render();if(emit){this.dirty=true;if(this.changeCb)this.changeCb(this.value());}}
+	setupDragging(){
+		this.dragHandle=this.el.querySelector('.mfc-head');
+		this.dragHandle.title='Seret untuk memindahkan panel';
+		this.onDragStart=e=>{
+			if(e.button!==0||e.target.closest('button,select,input'))return;
+			const r=this.el.getBoundingClientRect();
+			this.dragState={pointerId:e.pointerId,startX:e.clientX,startY:e.clientY,left:r.left,top:r.top,moved:false};
+			this.dragHandle.setPointerCapture(e.pointerId);
+		};
+		this.onDragMove=e=>{
+			const drag=this.dragState;if(!drag||e.pointerId!==drag.pointerId)return;
+			const dx=e.clientX-drag.startX,dy=e.clientY-drag.startY;
+			if(!drag.moved&&Math.hypot(dx,dy)<3)return;
+			drag.moved=true;this.positionMoved=true;this.el.classList.add('is-dragging');e.preventDefault();
+			const r=this.el.getBoundingClientRect(),maxLeft=Math.max(0,innerWidth-r.width),maxTop=Math.max(0,innerHeight-r.height);
+			this.el.style.left=Math.max(0,Math.min(drag.left+dx,maxLeft))+'px';
+			this.el.style.top=Math.max(0,Math.min(drag.top+dy,maxTop))+'px';
+		};
+		this.onDragEnd=e=>{
+			if(!this.dragState||e.pointerId!==this.dragState.pointerId)return;
+			this.dragState=null;this.el.classList.remove('is-dragging');
+		};
+		this.dragHandle.addEventListener('pointerdown',this.onDragStart);
+		window.addEventListener('pointermove',this.onDragMove);
+		window.addEventListener('pointerup',this.onDragEnd);
+		window.addEventListener('pointercancel',this.onDragEnd);
+	}
 	render(){
 		const g=this.ctx,w=this.field.width,h=this.field.height;g.clearRect(0,0,w,h);g.fillStyle=`hsl(${this.hsv.h} 100% 50%)`;g.fillRect(0,0,w,h);let grad=g.createLinearGradient(0,0,w,0);grad.addColorStop(0,'#fff');grad.addColorStop(1,'transparent');g.fillStyle=grad;g.fillRect(0,0,w,h);grad=g.createLinearGradient(0,0,0,h);grad.addColorStop(0,'transparent');grad.addColorStop(1,'#000');g.fillStyle=grad;g.fillRect(0,0,w,h);
 		const x=this.hsv.s/100*this.field.width,y=(1-this.hsv.v/100)*this.field.height;g.beginPath();g.arc(x,y,7,0,Math.PI*2);g.strokeStyle='#111';g.lineWidth=3;g.stroke();g.beginPath();g.arc(x,y,6,0,Math.PI*2);g.strokeStyle='#fff';g.lineWidth=2;g.stroke();
@@ -134,7 +165,7 @@ class ColorPicker{
 	}
 	sampleCanvas(){
 		if(!cv||!ctx){note('Kanvas editor tidak tersedia untuk mengambil warna.');return;}
-		this.el.hidden=true;note('Klik piksel di kanvas untuk mengambil warna.');
+		this.el.hidden=true;note('Pilih titik piksel di kanvas editor untuk mengambil warna.');
 		const sample=e=>{
 			e.preventDefault();e.stopImmediatePropagation();
 			this.sampleHandler=null;
@@ -147,7 +178,9 @@ class ColorPicker{
 		cv.addEventListener('mousedown',this.sampleBlocker,{capture:true,once:true});
 	}
 	position(){
-		if(!this.anchor)return;const r=this.anchor.getBoundingClientRect(),w=240;this.el.style.left='0px';this.el.style.top='0px';this.el.style.width=w+'px';const h=this.el.getBoundingClientRect().height,top=r.bottom+h+8<innerHeight?r.bottom+6:Math.max(8,r.top-h-6),left=Math.max(8,Math.min(r.left,innerWidth-w-8));this.el.style.left=left+'px';this.el.style.top=top+'px';
+		const w=Math.min(240,Math.max(0,innerWidth-16));this.el.style.width=w+'px';
+		if(this.positionMoved){const r=this.el.getBoundingClientRect();this.el.style.left=Math.max(0,Math.min(r.left,Math.max(0,innerWidth-r.width)))+'px';this.el.style.top=Math.max(0,Math.min(r.top,Math.max(0,innerHeight-r.height)))+'px';return;}
+		if(!this.anchor)return;const r=this.anchor.getBoundingClientRect();this.el.style.left='0px';this.el.style.top='0px';const h=this.el.getBoundingClientRect().height,top=r.bottom+h+8<innerHeight?r.bottom+6:Math.max(8,r.top-h-6),left=Math.max(8,Math.min(r.left,innerWidth-w-8));this.el.style.left=left+'px';this.el.style.top=top+'px';
 	}
 	updateFromPoint(e){const r=this.field.getBoundingClientRect();this.hsv.s=ColorUtils.clamp((e.clientX-r.left)/r.width*100,0,100);this.hsv.v=ColorUtils.clamp((1-(e.clientY-r.top)/r.height)*100,0,100);this.current={...ColorUtils.hsvToRgb(this.hsv.h,this.hsv.s,this.hsv.v),a:this.current.a};this.setColor(this.current);}
 	bind(){

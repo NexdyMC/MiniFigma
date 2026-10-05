@@ -429,8 +429,37 @@ MF.init.push(function initPanel(){
 		const rotation=parseFloat($('#prot').val())||0,single=selected.length===1,items=rotationMembers(selected),box=ubox(selected),center=single?pvt(selected[0]):[box.x+box.w/2,box.y+box.h/2],states=rotationStates(items);
 		rotateSet(items,center,single?rotation-(selected[0].rot||0):rotation,states);syncProps();draw();save();
 	});
-	$('#pw').on('change',()=>{const b=selectionBox();if(!b)return;const w=Math.max(1,+$('#pw').val()||1);if(sel&&sel.type==='text'){if(sel.tm==='aw')sel.tm='ah';sel.w=w;fitText(sel);refresh();save();return;}let h=b.h;if(sel&&sel.ar)h=w*(b.h/(b.w||1));$('#ph').val(Math.round(h*100)/100);resizeSelectionTo(w,h);});
-	$('#ph').on('change',()=>{const b=selectionBox();if(!b)return;let h=Math.max(1,+$('#ph').val()||1),w=b.w;if(sel&&sel.type==='text'){sel.tm='fx';sel.h=h;sel.w=w;fitText(sel);refresh();save();return;}if(sel&&sel.ar)w=h*(b.w/(b.h||1));$('#pw').val(Math.round(w*100)/100);resizeSelectionTo(w,h);});
+	$('#pw').on('change',()=>{
+		const b=selectionBox();if(!b)return;
+		const w=Math.max(1,+$('#pw').val()||1);
+		if(sel&&sel.type==='text'){if(sel.tm==='aw')sel.tm='ah';sel.w=w;fitText(sel);refresh();save();return;}
+		let h=b.h;
+		if(sel&&sel.ar)h=w*(b.h/(b.w||1));
+		$('#ph').val(Math.round(h*100)/100);
+		if(sel&&!multi.length&&isResizeable(sel)){
+			const start=JSON.parse(JSON.stringify(sel));
+			const W0=anchorWorld(start,0,0);
+			resizeAnchored(sel,start,w,h,0,0,W0);
+			draw();save();
+		}else{
+			resizeSelectionTo(w,h);
+		}
+	});
+	$('#ph').on('change',()=>{
+		const b=selectionBox();if(!b)return;
+		let h=Math.max(1,+$('#ph').val()||1),w=b.w;
+		if(sel&&sel.type==='text'){sel.tm='fx';sel.h=h;sel.w=w;fitText(sel);refresh();save();return;}
+		if(sel&&sel.ar)w=h*(b.w/(b.h||1));
+		$('#pw').val(Math.round(w*100)/100);
+		if(sel&&!multi.length&&isResizeable(sel)){
+			const start=JSON.parse(JSON.stringify(sel));
+			const W0=anchorWorld(start,0,0);
+			resizeAnchored(sel,start,w,h,0,0,W0);
+			draw();save();
+		}else{
+			resizeSelectionTo(w,h);
+		}
+	});
 	$('#par').on('change',()=>{each(s=>{s.ar=chk('#par');});$('#parBtn').toggleClass('on',chk('#par')).html(I(chk('#par')?'lock':'unlock',14));});
 	$('#parBtn').on('click',()=>{if(!sel)return;$('#par').prop('checked',!chk('#par')).trigger('change');});
 	$('#ppx,#ppy').on('change',()=>{if(!sel)return;setPivot(sel,cl($('#ppx').val(),-500,500,50)/100,cl($('#ppy').val(),-500,500,50)/100);draw();save();$('#px').val(rd(bbox(sel).x));$('#py').val(rd(bbox(sel).y));});

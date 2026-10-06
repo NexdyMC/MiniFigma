@@ -198,10 +198,8 @@ function syncSwatch($card,key,color,opacity){
 	});
 }
 function updateGradientCard($card){
-	const type=$card.find('[data-k="type"]')[0]?.dataset.value||$card.find('[data-k="type"]').val(),p={
-		type,color:$card.find('[data-k="color"]').val(),color2:$card.find('[data-k="color2"]').val(),
-		angle:$card.find('[data-k="angle"]')[0]?.dataset.value||$card.find('[data-k="angle"]').val(),stops:[...$card.find('[data-stop]')].map(el=>({pos:+$(el).find('[data-k="stopPos"]').val()||0,color:hex(el.querySelector('[data-color-key="stopColor"]')?.dataset.color)||'#d9d9d9'}))
-	};
+	const kind=$card.attr('data-kind'),index=+$card.attr('data-index'),p=getPaintLayers(selAll()[0],kind)[index]||{};
+	const type=p.type||'solid',color=hex(p.color)||'#d9d9d9',color2=hex(p.color2)||'#ffffff',angle=cl(p.angle,0,360,0),stops=paintStops(p);
 	$card.find('[data-gradient]').toggleClass('hidden',type==='solid');
 	$card.find('[data-start-label]').text(type==='solid'?'Warna':'Awal · 0%');
 	syncGradientPreview($card,{...p,type});
@@ -259,7 +257,6 @@ function paintCard(kind,index,p){
 	return `<div class="mf-card space-y-2" data-kind="${kind}" data-index="${index}">
 		<div class="mf-paint-row"><button type="button" class="mf-color" data-color-picker="paint" data-kind="${kind}" data-index="${index}" data-color-key="color" data-color="${color}" data-stop-index="${gradient?0:''}" style="background-color:${color}" title="Pilih warna" aria-label="Pilih warna"></button><input data-k="hex" value="${color.slice(1).toUpperCase()}" maxlength="6" class="mf-input mf-hex w-8" aria-label="Kode warna"><span data-start-label class="mf-paint-label">${gradient?'Awal':'Warna'}</span>
 		${paintCombo('opacity',POP_VALUES,0,100,1,'%')}<button type="button" data-action="visible" class="mf-icon-btn" title="Sembunyikan" aria-label="Sembunyikan">${I(p.visible===false?'eyeoff':'eye',14)}</button><button type="button" data-action="delete" class="mf-icon-btn" title="Hapus" aria-label="Hapus">${I('minus',14)}</button></div>
-		<label class="flex items-center gap-2"><span class="mf-label">${stroke?'Jenis':'Jenis isi'}</span>${paintSelect('type',typeItems)}</label>
 		<div data-gradient class="${gradient?'':'hidden'} space-y-2">
 			<div data-gradient-preview role="img" aria-label="Pratinjau gradien" class="h-7 rounded border border-white/20" style="${gradient?`background:${gradientPreview(p)}`:''}"></div>
 			<div data-stop-list class="space-y-1">${stopRows}</div><button type="button" data-action="add-stop" class="mf-icon-btn" title="Tambah stop" aria-label="Tambah stop" ${stops.length>=8?'disabled':''}>${I('plus',14)}</button>
@@ -274,7 +271,6 @@ function renderPaint(kind){
 	if(paintSignatures[kind]!==signature){
 		$list.empty();layers.forEach((p,i)=>$list.append(paintCard(kind,i,p)));paintSignatures[kind]=signature;
 	}
-	$list.find('[data-k="type"]').each(function(){const p=layers[+$(this).closest('[data-index]').attr('data-index')];$(this).val(p.type==='linear'?'Gradien linear':p.type==='radial'?'Gradien radial':p.type==='angular'?'Gradien sudut':'Solid').attr('data-value',p.type);});
 	$list.find('[data-k="angle"]').each(function(){const p=layers[+$(this).closest('[data-index]').attr('data-index')];$(this).val(String(cl(p.angle,0,360,0)));});
 	$list.find('[data-k="position"]').each(function(){const p=layers[+$(this).closest('[data-index]').attr('data-index')];$(this).val(['center','inside','outside'].includes(p.position)?p.position:'center');});
 	$list.find('[data-k="dash"]').each(function(){const p=layers[+$(this).closest('[data-index]').attr('data-index')];$(this).val(['solid','dash','dot','dashDot'].includes(p.dash)?p.dash:'solid');});

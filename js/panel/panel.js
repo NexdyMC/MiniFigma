@@ -170,8 +170,8 @@ const hex=v=>{v=(v||'').trim();if(v[0]!=='#')v='#'+v;return /^#[0-9a-f]{6}$/i.te
 const PALETTE_KEY='minifigma.palette',MAX_PALETTE=24;
 let paletteSignature='';
 function basePaint(kind,color){
-	return kind==='fill'?{type:'solid',color:color||'#d9d9d9',color2:'#ffffff',angle:0,opacity:100,visible:true}:
-		{type:'solid',color:color||'#d9d9d9',color2:'#ffffff',angle:0,opacity:100,visible:true,weight:1,position:'center',dash:'solid',cap:'butt',join:'round',startArrow:'none',endArrow:'none'};
+	return kind==='fill'?{type:'solid',color:color||'#d9d9d9',stops:[{pos:0,color:color||'#d9d9d9'},{pos:100,color:'#ffffff',opacity:100}],angle:0,opacity:100,visible:true}:
+		{type:'solid',color:color||'#d9d9d9',stops:[{pos:0,color:color||'#d9d9d9'},{pos:100,color:'#ffffff',opacity:100}],angle:0,opacity:100,weight:1,position:'center',dash:'solid',cap:'butt',join:'round',startArrow:'none',endArrow:'none'};
 }
 function paintStops(p){
 	const src=Array.isArray(p.stops)&&p.stops.length>=2?p.stops:[{pos:0,color:p.color||'#d9d9d9'},{pos:100,color:p.color2||p.color||'#d9d9d9'}];
@@ -199,10 +199,10 @@ function syncSwatch($card,key,color,opacity){
 }
 function updateGradientCard($card){
 	const kind=$card.attr('data-kind'),index=+$card.attr('data-index'),p=getPaintLayers(selAll()[0],kind)[index]||{};
-	const type=p.type||'solid',color=hex(p.color)||'#d9d9d9',color2=hex(p.color2)||'#ffffff',angle=cl(p.angle,0,360,0),stops=paintStops(p);
+	const type=p.type||'solid',stops=paintStops(p),color=hex(stops[0]?.color)||'#d9d9d9',color2=hex(stops[stops.length-1]?.color)||'#ffffff',angle=cl(p.angle,0,360,0);
 	$card.find('[data-gradient]').toggleClass('hidden',type==='solid');
 	$card.find('[data-start-label]').text(type==='solid'?'Warna':'Awal · 0%');
-	syncGradientPreview($card,{...p,type});
+	syncGradientPreview($card,{...p,type,stops});
 }
 function setPaintValue(kind,index,key,value,commit=true){
 	const selected=selAll(),source=selected.length?getPaintLayers(selected[0],kind)[index]:null,template=source||basePaint(kind);

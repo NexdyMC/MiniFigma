@@ -1,428 +1,492 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mini Vector — Offline Vector Editor</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mini Vector</title>
+<link rel="stylesheet" href="libs/tailwind.css">
 
+<!-- ============================================================
+     RESPONSIVE + UKURAN NYAMAN
+     Semua ukuran dikontrol lewat variabel di :root, jadi cukup ubah
+     angka di sini untuk menyesuaikan besar teks / ikon / tombol.
+     Ditulis sebagai CSS biasa (bukan class Tailwind baru) supaya tetap
+     jalan walau libs/tailwind.css adalah hasil build yang tidak berisi
+     class tambahan.
+     ============================================================ -->
 <style>
-  :root{--mf-panel:#2c2c2c;--mf-divider:#383838;--mf-input:#383838;--mf-muted:#b3b3b3;--mf-icon:#8c8c8c;--mf-active:#0d99ff}
-  body{font-family:Inter,system-ui,Segoe UI,sans-serif}
-  input[type=color]{width:24px;height:24px;padding:0;border:0;background:none;cursor:pointer}
-  .tool.on{background:#0d99ff;color:#fff}
-  .txt-toggle.on{background:#0d99ff;color:#fff}
-  .num{background:var(--mf-input);border:1px solid transparent;border-radius:5px;padding:4px 6px;width:100%;height:32px;font-size:12px;color:#fff;outline:none}
-  .num:hover{border-color:#4a4a4a}
-  .num:focus{border-color:var(--mf-active);box-shadow:none}
-  .num:disabled{opacity:.4}
-  .num::-webkit-inner-spin-button,.num::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
-  .num[type=number]{appearance:textfield;-moz-appearance:textfield}
-  .props-scroll{overflow-y:auto;scrollbar-width:thin;scrollbar-color:#444 transparent}
-  .props-scroll::-webkit-scrollbar{width:8px}
-  .props-scroll::-webkit-scrollbar-track{background:transparent}
-  .props-scroll::-webkit-scrollbar-thumb{background:#444;border-radius:8px}
-  #props{background:var(--mf-panel);min-height:100%}
-  .mf-panel-title{padding:12px 16px;font-size:12px;font-weight:600;color:#fff;border-bottom:1px solid var(--mf-divider)}
-  .mf-section{padding:8px 16px 12px;border-bottom:1px solid var(--mf-divider)}
-  .mf-section-head{display:flex;align-items:center;min-height:24px;margin-bottom:10px;color:#fff;font-size:11px;font-weight:600;cursor:pointer}
-  .mf-section-head .mf-actions{display:flex;align-items:center;gap:2px;margin-left:auto}
-  .mf-section-head .mf-section-chevron{width:14px;height:14px;color:var(--mf-icon);transition:transform .12s}
-  .mf-section.is-collapsed>.mf-section-head{margin-bottom:0}
-  .mf-section.is-collapsed>.mf-section-head .mf-section-chevron{transform:rotate(-90deg)}
-  .mf-section.is-collapsed>.mf-section-body{display:none}
-  .mf-section-body{display:grid;gap:10px}
-  .mf-subsection{padding:0;border:0}
-  .mf-subsection>.mf-section-head{margin:0;color:var(--mf-muted);font-size:10px}
-  .mf-label{display:block;margin-bottom:4px;color:var(--mf-muted);font-size:11px}
-  .mf-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-  .mf-control{position:relative;display:flex;align-items:center;min-width:0;height:32px;background:var(--mf-input);border:1px solid transparent;border-radius:5px}
-  .mf-control:hover{border-color:#4a4a4a}
-  .mf-control:focus-within{border-color:var(--mf-active)}
-  .mf-control .mf-input{min-width:0;width:100%;height:100%;border:0;outline:0;background:transparent;color:#fff;padding:0 7px;font-size:12px;appearance:textfield}
-  .mf-control .mf-input:focus{box-shadow:none}
-  .mf-prefix{display:flex;align-items:center;justify-content:center;flex:none;min-width:25px;height:100%;padding:0 5px;color:var(--mf-icon);font-size:12px;cursor:ew-resize;user-select:none}
-  .mf-prefix svg{width:14px;height:14px}
-  .mf-suffix{flex:none;padding:0 7px;color:#8c8c8c;font-size:11px}
-  .mf-combo{position:relative;min-width:0}
-  .mf-combo>.mf-control{padding-right:26px}
-  .mf-inline-combo{display:inline-flex;min-width:58px;flex:0 0 72px;vertical-align:middle}
-  .mf-inline-combo .mf-control{height:28px}
-  .mf-inline-combo .mf-control .mf-input{padding-left:7px;padding-right:3px}
-  .mf-inline-combo .mf-combo-toggle{height:24px;width:20px}
-  .mf-inline-combo .mf-control{padding-right:22px}
-  .mf-inline-combo .mf-suffix{padding:0 3px}
-  .mf-combo-toggle{position:absolute;right:1px;top:1px;display:flex;align-items:center;justify-content:center;width:24px;height:28px;border:0;border-radius:4px;background:transparent;color:#aaa;cursor:pointer}
-  .mf-combo-toggle:hover{background:#444;color:#fff}
-  .mf-icon-btn{display:inline-flex;align-items:center;justify-content:center;flex:none;width:24px;height:24px;padding:0;border:0;border-radius:4px;background:transparent;color:#b3b3b3;cursor:pointer}
-  .mf-icon-btn:hover{background:#444;color:#fff}
-  .mf-icon-btn.on{background:rgba(13,153,255,.3);color:#fff}
-  .mf-align{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
-  .mf-align .mf-icon-btn{width:100%;background:#383838}
-  .mf-actions-row{display:flex;gap:4px}
-  .mf-segmented{display:flex;gap:2px;padding:2px;border-radius:6px;background:#383838}
-  .mf-segmented .mf-icon-btn{flex:1}
-  .mf-segmented .mf-icon-btn.on{background:#0d99ff;color:#fff}
-  .mf-switch{position:relative;width:28px;height:16px;appearance:none;border:0;border-radius:10px;background:#555;cursor:pointer}
-  .mf-switch:before{content:"";position:absolute;left:2px;top:2px;width:12px;height:12px;border-radius:50%;background:#ddd;transition:transform .12s}
-  .mf-switch:checked{background:#0d99ff}
-  .mf-switch:checked:before{transform:translateX(12px);background:#fff}
-  .mf-color{position:relative;width:16px;height:16px;overflow:hidden;flex:none;border:1px solid #ffffff40;border-radius:3px;background-color:#383838}
-  button.mf-color{padding:0;cursor:pointer}
-  button.mf-color:focus-visible{outline:2px solid #0d99ff;outline-offset:2px}
-  .mf-color.checker{background-image:linear-gradient(45deg,#555 25%,transparent 25%),linear-gradient(-45deg,#555 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#555 75%),linear-gradient(-45deg,transparent 75%,#555 75%);background-size:8px 8px;background-position:0 0,0 4px,4px -4px,-4px 0}
-  .mf-color.mixed{background-image:repeating-linear-gradient(135deg,#4a4a4a 0 3px,#383838 3px 6px)}
-  .mf-color input{position:absolute;inset:0;width:100%;height:100%;opacity:0}
-  .mf-paint-row{display:flex;align-items:center;gap:4px;min-height:32px}
-  .mf-paint-row .mf-paint-label{display:none}
-  .mf-paint-row .mf-hex{height:28px;flex:1;min-width:32px;background:#383838;border:1px solid transparent;border-radius:5px;padding:0 6px;color:#fff;font-size:11px;text-transform:uppercase;outline:none}
-  .mf-paint-row .mf-hex:hover{border-color:#4a4a4a}
-  .mf-paint-row .mf-hex:focus{border-color:#0d99ff}
-  .mf-card{padding:8px;border-radius:6px;background:#333}
-  .mf-section-body>.mf-card{padding:6px;background:#333}
-  .mf-combo-empty{padding:8px;color:#b3b3b3;font-size:12px}
-  .mf-combo-popup{position:fixed;z-index:20000;display:none;min-width:min(180px,calc(100vw - 16px));max-width:min(300px,calc(100vw - 16px));max-height:60vh;overflow:auto;padding:6px;background:#2c2c2c;border:1px solid #000;border-radius:12px;box-shadow:0 12px 32px #000b;color:#fff}
-  .mf-combo-popup.open{display:block}
-  .mf-combo-item{display:flex;align-items:center;gap:8px;width:100%;min-height:28px;padding:4px 9px;border:0;border-radius:6px;background:transparent;color:#fff;text-align:left;font-size:13px;font-weight:600;cursor:pointer}
-  .mf-combo-item:hover,.mf-combo-item.active{background:#0d99ff}
-  .mf-combo-check{width:14px;height:14px;flex:none;color:#fff}
-  .mf-hidden{display:none!important}
-  #textedit{position:absolute;z-index:5;display:none;box-sizing:border-box;padding:0 1px;border:1px solid #0d99ff;border-radius:1px;background:transparent;outline:none;white-space:pre-wrap;overflow-wrap:break-word;overflow:hidden;resize:none;user-select:text}
-  #mfContextMenu{position:fixed;z-index:10000;width:240px;max-height:calc(100vh - 8px);overflow-y:auto;background:#2c2c2c;border:1px solid #000;border-radius:8px;box-shadow:0 12px 28px #0008}
-  .cm-action{display:flex;align-items:center;gap:12px;width:100%;border:0;background:transparent;color:inherit;cursor:pointer}
-  .cm-action:hover:not(.is-disabled),.cm-action:focus-visible{background:#0d99ff;color:#fff}
-  .cm-action.is-disabled{opacity:.4;pointer-events:none}
-  .cm-subwrap{position:relative}
-  .cm-submenu{position:fixed;z-index:10001;width:200px;max-height:calc(100vh - 8px);overflow-y:auto;background:#2c2c2c;border:1px solid #000;border-radius:8px;box-shadow:0 12px 28px #0008}
-  .cm-submenu.hidden{display:none}
-  .cm-shortcut{margin-left:auto;color:#999}
-  .cm-action:hover .cm-shortcut,.cm-action:focus-visible .cm-shortcut{color:#fff}
-  .cm-action:focus-visible{outline:1px solid #0d99ff;outline-offset:-1px}
-  .mf-text-btn{width:100%;height:28px;padding:0 8px;border:0;border-radius:4px;background:#383838;color:#ddd;text-align:left;font-size:11px;cursor:pointer}
-  .mf-text-btn:hover{background:#444}
-  .mf-check{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#b3b3b3;font-size:11px}
-  .mf-advanced{display:grid;gap:8px;padding-top:8px;border-top:1px solid #383838}
-  .mf-advanced summary{color:#b3b3b3;font-size:11px;cursor:pointer}
-  .mf-color-picker{position:fixed;z-index:20010;width:240px;padding:10px;border:1px solid #181818;border-radius:10px;background:#2c2c2c;box-shadow:0 12px 32px #000b;color:#fff;font:12px Inter,system-ui,sans-serif}
-  .mf-color-picker[hidden],.mf-color-picker [hidden]{display:none!important}
-  .mfc-head,.mfc-tabs,.mfc-types,.mfc-slider-row,.mfc-code{display:flex;align-items:center;gap:6px}
-  .mfc-head{margin-bottom:10px;cursor:grab;user-select:none;touch-action:none}
-  .mf-color-picker.is-dragging .mfc-head{cursor:grabbing}
-  .mfc-tabs{flex:1}
-  .mfc-tabs button,.mfc-icon,.mfc-types button,.mfc-slider-row button{border:0;border-radius:4px;background:transparent;color:#bbb;cursor:pointer}
-  .mfc-tabs button{padding:5px 7px;font-size:11px}
-  .mfc-tabs button.active,.mfc-tabs button:hover,.mfc-icon:hover,.mfc-types button.active{background:#444;color:#fff}
-  .mfc-icon{width:22px;height:22px;font-size:16px}
-  .mfc-types{justify-content:space-between;margin-bottom:8px}
-  .mfc-types button{width:28px;height:24px;font-size:15px}
-  .mfc-types button:disabled{opacity:.35;cursor:not-allowed}
-  .mfc-paint-tools{display:flex;align-items:center;gap:5px;margin:-2px 0 8px}
-  .mfc-paint-tools select{flex:1;min-width:0;height:26px;padding:0 6px;border:1px solid #444;border-radius:4px;background:#383838;color:#eee;font-size:11px}
-  .mfc-paint-tools button,.mfc-contrast-settings button{width:26px;height:26px;border:1px solid #444;border-radius:4px;background:#383838;color:#ddd;cursor:pointer}
-  .mfc-paint-tools button[aria-pressed="true"]{border-color:#0d99ff;background:#16476a;color:#fff}
-  .mfc-contrast{margin:0 0 8px;padding:6px;border:1px solid #444;border-radius:5px;background:#252525}
-  .mfc-contrast-row{display:flex;align-items:center;gap:5px;color:#aaa;font-size:10px}
-  .mfc-contrast-swatch{width:15px;height:15px;border:1px solid #ffffff66;border-radius:3px}
-  .mfc-contrast-row strong{margin-left:auto;color:#fff;font-size:11px}
-  .mfc-contrast-row button{width:20px;height:20px;border:0;border-radius:3px;background:transparent;color:#bbb;cursor:pointer}
-  .mfc-contrast-badges{display:flex;gap:5px;margin-top:5px}
-  .mfc-contrast-badges button{flex:1;height:23px;border:1px solid #555;border-radius:4px;background:#383838;color:#ff9b9b;font-size:10px;font-weight:600;cursor:pointer}
-  .mfc-contrast-badges button.pass{color:#83e1a1}
-  .mfc-contrast-settings{display:grid;grid-template-columns:repeat(3,1fr) 28px;align-items:end;gap:4px;margin-top:6px}
-  .mfc-contrast-settings label{display:grid;gap:2px;color:#aaa;font-size:9px}
-  .mfc-contrast-settings select{width:100%;height:23px;padding:0 3px;border:1px solid #444;border-radius:3px;background:#383838;color:#fff;font-size:10px}
-  .mfc-contrast-settings input[type=color]{width:26px;height:23px}
-  .mfc-field-wrap{position:relative;width:208px;height:208px;margin:auto}
-  .mfc-field{display:block;width:100%;height:208px;border-radius:3px;cursor:crosshair;touch-action:none}
-  .mfc-field:focus-visible{outline:2px solid #0d99ff;outline-offset:2px}
-  .mfc-contrast-overlay{position:absolute;inset:0;width:208px;height:208px;pointer-events:none}
-  .mfc-slider-row{margin:10px 0 8px}
-  .mfc-slider-row button{width:22px;height:22px;color: #ffffff;}
-  .mfc-slider-row input,.mfc-opacity input{width:100%;height:12px;appearance:none;border:1px solid #555;border-radius:8px;cursor:pointer}
-  .mfc-slider-row input{background:linear-gradient(90deg,#f00 0%,#ff0 17%,#0f0 33%,#0ff 50%,#00f 67%,#f0f 83%,#f00 100%)}
-  .mfc-slider-row input::-webkit-slider-thumb,.mfc-opacity input::-webkit-slider-thumb{appearance:none;width:12px;height:12px;border:2px solid #fff;border-radius:50%;background:#333;box-shadow:0 0 2px #000}
-  .mfc-slider-row input::-moz-range-thumb,.mfc-opacity input::-moz-range-thumb{width:9px;height:9px;border:2px solid #fff;border-radius:50%;background:#333;box-shadow:0 0 2px #000}
-  .mfc-opacity{padding:3px 0 10px}
-  .mfc-opacity input{height:14px;background-color:#383838}
-  .mfc-code select,.mfc-code input{height:28px;min-width:0;border:1px solid #444;border-radius:4px;background:#383838;color:#fff;font-size:11px}
-  .mfc-code select{width:62px;padding:0 4px}
-  .mfc-code input[data-value]{flex:1;width:0;padding:0 6px}
-  .mfc-code [data-components]{display:grid;flex:1;gap:3px;min-width:0}
-  .mfc-code [data-components] input{width:100%;padding:0 3px;text-align:center}
-  .mfc-code input[data-alpha]{width:42px;padding:0 4px}
-  .mfc-code span{margin-left:-5px;color:#aaa}
-  .mfc-library-title,.mfc-library-empty{margin:0 0 8px;color:#bbb;font-size:11px}
-  .mfc-library-grid{display:grid;grid-template-columns:repeat(9,24px);gap:4px;max-height:240px;overflow:auto}
-  .mfc-library-grid button{width:24px;height:24px;border:1px solid #ffffff40;border-radius:3px;cursor:pointer}
-  .mfc-library-grid button:hover{outline:2px solid #0d99ff;outline-offset:1px}
-  .mv-code-panel{display:grid;gap:8px;color:#ddd;font-size:11px}
-  .mv-code-title{font-size:11px;font-weight:600;color:#fff}
-  .mv-code-mode{display:flex;align-items:center;justify-content:space-between;gap:8px}
-  .mv-code-mode select,.mv-code-width{min-width:0;border:1px solid #484848;border-radius:5px;background:#383838;color:#fff;padding:5px 7px}
-  .mv-code-snippet,.mv-code-preview{margin:0;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid #424242;border-radius:5px;background:#222;padding:8px;color:#ddd;font:11px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace}
-  .mv-code-snippet{max-height:110px}
-  .mv-code-actions,.mv-code-toolbar{display:flex;align-items:center;gap:6px}
-  .mv-code-button{border:1px solid #484848;border-radius:5px;background:#383838;color:#fff;padding:6px 9px;cursor:pointer}
-  .mv-code-button:hover:not(:disabled),.mv-code-preset:hover{background:#4a4a4a}
-  .mv-code-button:disabled{opacity:.45;cursor:not-allowed}
-  .mv-code-button.primary{background:#0d99ff;border-color:#0d99ff}
-  .mv-code-note{color:#aaa;line-height:1.4}
-  .mv-code-overlay[hidden]{display:none}
-  .mv-code-overlay{position:fixed;z-index:30000;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;background:#000a;color:#eee;font:12px Inter,system-ui,sans-serif}
-  .mv-code-modal{display:flex;flex-direction:column;width:min(1200px,calc(100vw - 32px));height:min(820px,calc(100vh - 32px));overflow:hidden;border:1px solid #484848;border-radius:10px;background:#2c2c2c;box-shadow:0 16px 60px #000a}
-  .mv-code-head{display:flex;align-items:center;gap:12px;min-height:44px;padding:0 14px;border-bottom:1px solid #444}
-  .mv-code-head strong{flex:1}
-  .mv-code-columns{display:grid;grid-template-columns:minmax(0,1fr) 8px minmax(0,1fr);flex:1;min-height:0}
-  .mv-code-side{display:flex;flex-direction:column;min-width:0;min-height:0;padding:10px;gap:8px}
-  .mv-code-toolbar{flex-wrap:wrap;min-height:30px}
-  .mv-code-presets{display:flex;gap:4px}
-  .mv-code-preset{border:1px solid #484848;border-radius:4px;background:#383838;color:#ddd;padding:4px 7px;cursor:pointer}
-  .mv-code-width-label{display:flex;align-items:center;gap:5px;margin-left:auto}
-  .mv-code-width{width:78px}
-  .mv-code-viewport{flex:1;min-height:0;overflow:auto;border:1px solid #444;border-radius:5px;background:#202020}
-  .mv-code-frame{display:block;min-width:0;max-width:none;height:100%;border:0;background:#fff}
-  .mv-code-resize{width:8px;padding:0;border:0;background:#393939;cursor:col-resize}
-  .mv-code-resize:hover{background:#0d99ff}
-  .mv-code-preview{flex:1;min-height:0;white-space:pre;overflow:auto}
-  .mv-code-status{min-width:60px;color:#8bc7ff}
-  .mv-code-close{border:0;background:transparent;color:#ddd;font-size:18px;cursor:pointer}
-  .mv-code-close:hover{color:#fff}
-  @media(max-width:720px){
-    .mv-code-overlay{padding:8px}
-    .mv-code-modal{width:calc(100vw - 16px);height:calc(100vh - 16px)}
-    .mv-code-columns{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(180px,1fr) 8px minmax(160px,1fr)}
-    .mv-code-resize{width:100%;height:8px;cursor:row-resize}
-    .mv-code-head{min-height:40px}
+  /* Laptop (1024 - 1439px) = ukuran dasar */
+  :root {
+    --fs: 14px;      /* teks utama */
+    --fs-sm: 13px;   /* label kecil, kode */
+    --ico: 18px;     /* ikon */
+    --ctl: 34px;     /* tinggi tombol / input / baris layer */
+    --bar: 48px;     /* tinggi top bar */
+    --side: 260px;   /* lebar sidebar kiri & kanan */
+    --tool: 38px;    /* tombol toolbar bawah */
   }
+  /* Desktop besar (>= 1440px) */
+  @media (min-width: 1440px) {
+    :root { --fs: 16px; --fs-sm: 14px; --ico: 20px; --ctl: 38px; --bar: 54px; --side: 300px; --tool: 42px; }
+  }
+  /* Tablet (640 - 1023px) */
+  @media (max-width: 1023px) {
+    :root { --fs: 15px; --fs-sm: 14px; --ico: 20px; --ctl: 40px; --bar: 52px; --side: 280px; --tool: 42px; }
+  }
+  /* Android / HP (< 640px) */
+  @media (max-width: 639px) {
+    :root { --fs: 16px; --fs-sm: 15px; --ico: 22px; --ctl: 44px; --bar: 56px; --side: min(86vw, 320px); --tool: 44px; }
+  }
+
+  html, body { font-size: var(--fs) !important; line-height: 1.4; -webkit-text-size-adjust: 100%; }
+  button, input, select { font-size: inherit; font-family: inherit; }
+
+  /* ---------- Kerangka ---------- */
+  #app  { height: 100vh; height: 100dvh !important; grid-template-rows: var(--bar) minmax(0, 1fr) !important; }
+  #main { grid-template-columns: var(--side) minmax(0, 1fr) var(--side) !important; }
+  #topbar { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+  #topbar::-webkit-scrollbar { display: none; }
+  #topbar > * { flex-shrink: 0; }
+  #canvas { touch-action: none; }
+
+  /* ---------- Top bar ---------- */
+  #file-name { min-width: 110px !important; font-size: var(--fs) !important; white-space: nowrap; }
+  .tb-btn {
+    min-height: var(--ctl); min-width: var(--ctl);
+    padding-left: 10px; padding-right: 10px;
+    gap: 6px; font-size: var(--fs) !important; white-space: nowrap;
+  }
+  #btn-new, #btn-collapse-layers { width: var(--ctl) !important; height: var(--ctl) !important; }
+  #zoom-select { height: var(--ctl) !important; font-size: var(--fs) !important; padding: 0 8px; }
+
+  /* ---------- Ikon (jangan sentuh <svg> sprite yang width=0) ---------- */
+  .tb-btn svg, .tool svg, .layer svg, .acc-head svg,
+  #btn-new svg, #btn-settings svg, #btn-collapse-layers svg, .drawer-btn svg {
+    width: var(--ico) !important; height: var(--ico) !important; flex: none;
+  }
+
+  /* ---------- Sidebar kiri ---------- */
+  #left-sidebar > div:first-child { font-size: var(--fs) !important; padding: 10px 12px 8px !important; }
+  #layer-search { height: var(--ctl) !important; font-size: var(--fs) !important; }
+  .layer { min-height: var(--ctl); font-size: var(--fs) !important; }
+  #btn-settings { height: var(--ctl) !important; font-size: var(--fs) !important; }
+
+  /* ---------- Toolbar bawah ---------- */
+  #toolbar {
+    max-width: calc(100% - 16px); overflow-x: auto; scrollbar-width: none;
+    gap: 4px !important; padding: 6px !important;
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  #toolbar::-webkit-scrollbar { display: none; }
+  .tool { width: var(--tool) !important; height: var(--tool) !important; flex: none; }
+  #toolbar span { height: calc(var(--tool) * .55) !important; }
+  #empty-state { font-size: var(--fs) !important; text-align: center; padding: 16px 24px; }
+
+  /* ---------- Sidebar kanan ---------- */
+  .mode-tab { min-height: var(--ctl); padding: 0 18px; font-size: var(--fs) !important; }
+  .acc-head { min-height: calc(var(--ctl) + 4px); font-size: var(--fs) !important; }
+  .field { font-size: var(--fs-sm) !important; }
+  .field span { font-size: var(--fs-sm) !important; }
+  .field input { height: var(--ctl) !important; font-size: var(--fs) !important; min-width: 0; }
+  .field input[type="color"] { padding: 2px; }
+  #btn-export { min-height: var(--ctl); }
+  .code-block { font-size: var(--fs) !important; }
+  .code-block pre { font-size: var(--fs-sm) !important; line-height: 1.5; overflow-x: auto; }
+
+  /* ---------- Tombol drawer (hanya HP / tablet kecil) ---------- */
+  .drawer-btn { display: none; place-items: center; align-self: center; margin: 0 6px; width: var(--ctl); height: var(--ctl);
+    border: 1px solid var(--line, #444); border-radius: 4px; }
+  #backdrop { display: none; position: fixed; left: 0; right: 0; bottom: 0; top: var(--bar); z-index: 30; background: rgba(0, 0, 0, .55); }
+
+  @media (max-width: 899px) {
+    #main { grid-template-columns: minmax(0, 1fr) !important; }
+    #left-sidebar, #right-sidebar {
+      position: fixed; top: var(--bar); bottom: 0; width: var(--side); z-index: 40;
+      transition: transform .2s ease; box-shadow: 0 0 24px rgba(0, 0, 0, .5);
+    }
+    #left-sidebar  { left: 0;  transform: translateX(-105%); }
+    #right-sidebar { right: 0; transform: translateX(105%); }
+    body.show-left  #left-sidebar,
+    body.show-right #right-sidebar { transform: none; }
+    body.show-left #backdrop, body.show-right #backdrop { display: block; }
+    .drawer-btn { display: grid; }
+  }
+  @media (max-width: 639px) {
+    .lbl { display: none; }                 /* HP: tombol cukup ikon */
+    #file-name { min-width: 84px !important; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #left-sidebar, #right-sidebar { transition: none; }
+  }
+
+  /* ---------- Sembunyikan sidebar lewat shortcut (layar >= 900px) ---------- */
+  @media (min-width: 900px) {
+    body.hide-left  #left-sidebar,  body.hide-right #right-sidebar { display: none; }
+    body.hide-left  #main { grid-template-columns: 0 minmax(0, 1fr) var(--side) !important; }
+    body.hide-right #main { grid-template-columns: var(--side) minmax(0, 1fr) 0 !important; }
+    body.hide-left.hide-right #main { grid-template-columns: 0 minmax(0, 1fr) 0 !important; }
+  }
+
+  /* ---------- Panel bantuan shortcut ---------- */
+  #help { position: fixed; inset: 0; z-index: 60; display: none; place-items: center; background: rgba(0, 0, 0, .6); padding: 12px; }
+  #help.open { display: grid; }
+  #help-box { width: min(720px, 100%); max-height: 100%; overflow-y: auto; background: var(--panel, #2c2c2c);
+    border: 1px solid var(--line, #444); border-radius: 8px; padding: 16px 18px; font-size: var(--fs); }
+  #help-box h2 { font-size: calc(var(--fs) + 3px); font-weight: 600; margin: 0 0 10px; display: flex; justify-content: space-between; align-items: center; }
+  #help-box h3 { font-weight: 600; margin: 14px 0 6px; color: var(--mute, #aaa); }
+  #help-close { min-width: var(--ctl); min-height: var(--ctl); border: 1px solid var(--line, #444); border-radius: 4px; }
+  .help-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 24px; }
+  @media (max-width: 639px) { .help-grid { grid-template-columns: 1fr; } }
+  .help-row { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-bottom: 1px solid rgba(255, 255, 255, .06); }
+  kbd { font-family: inherit; font-size: var(--fs-sm); padding: 1px 7px; border: 1px solid var(--line, #555); border-radius: 4px;
+    background: rgba(255, 255, 255, .06); white-space: nowrap; }
 </style>
 </head>
-<body class="bg-[#2c2c2c] text-neutral-200 text-xs h-screen flex flex-col overflow-hidden select-none">
+<body>
+<!-- Ikon SVG inline (offline) -->
+<svg width="0" height="0" class="absolute" aria-hidden="true"><defs>
+  <symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 2v12M2 8h12"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 16 16"><path d="M5 3 2 6l3 3"/><path d="M2 6h7a4 4 0 0 1 0 8H6"/></symbol>
+  <symbol id="i-redo" viewBox="0 0 16 16"><path d="m11 3 3 3-3 3"/><path d="M14 6H7a4 4 0 0 0 0 8h3"/></symbol>
+  <symbol id="i-drive" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="1"/><circle cx="6" cy="7" r="1.2"/><path d="m3 12 4-3 3 2 3-3"/></symbol>
+  <symbol id="i-import" viewBox="0 0 16 16"><path d="M8 2v8M5 7l3 3 3-3M3 13h10"/></symbol>
+  <symbol id="i-save" viewBox="0 0 16 16"><path d="M3 2h8l2 2v10H3z"/><path d="M5 2v4h5V2M5 14v-4h6v4"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 16 16"><path d="m6 3 5 5-5 5"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 16 16"><circle cx="8" cy="8" r="2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 16 16"><path d="M2 5h8M2 8h12M2 11h9"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 16 16"><path d="M2 4h12M2 8h12M2 12h12"/><circle cx="5" cy="4" r="1.3"/><circle cx="11" cy="8" r="1.3"/><circle cx="7" cy="12" r="1.3"/></symbol>
+  <symbol id="i-select" viewBox="0 0 16 16"><path d="M3 2v11l3-3 2 4 2-1-2-4h4z"/></symbol>
+  <symbol id="i-hand" viewBox="0 0 16 16"><path d="M5 8V3.5a1 1 0 0 1 2 0V7m0-3.5v-1a1 1 0 0 1 2 0V7m0-3a1 1 0 0 1 2 0v4l1-1.5a1 1 0 0 1 1.6 1.2L11 13H7.5L4 9.5A1 1 0 0 1 5 8z"/></symbol>
+  <symbol id="i-frame" viewBox="0 0 16 16"><path d="M5 2v12M11 2v12M2 5h12M2 11h12"/></symbol>
+  <symbol id="i-rect" viewBox="0 0 16 16"><rect x="2.5" y="3.5" width="11" height="9"/></symbol>
+  <symbol id="i-ellipse" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/></symbol>
+  <symbol id="i-line" viewBox="0 0 16 16"><path d="M3 13 13 3"/></symbol>
+  <symbol id="i-polygon" viewBox="0 0 16 16"><path d="M8 2.5 13.5 6.5 11.5 13h-7l-2-6.5z"/></symbol>
+  <symbol id="i-star" viewBox="0 0 16 16"><path d="m8 2 1.8 4 4.2.4-3.2 2.8 1 4.2L8 11.2 4.2 13.4l1-4.2L2 6.4 6.2 6z"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 16 16"><path d="m3 13 1-4 6-6 3 3-6 6z"/><path d="m9 4 3 3"/></symbol>
+  <symbol id="i-pencil" viewBox="0 0 16 16"><path d="m2.5 13.5 1-3L11 3l2 2-7.5 7.5z"/></symbol>
+  <symbol id="i-text" viewBox="0 0 16 16"><path d="M3 4V3h10v1M8 3v10M6 13h4"/></symbol>
+  <symbol id="i-image" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10"/><circle cx="6" cy="7" r="1"/><path d="m2 12 4-3 3 2 5-4"/></symbol>
+</defs></svg>
 
-<header class="h-11 flex items-center gap-4 px-3 bg-[#1e1e1e] border-b border-black">
-  <span class="font-bold text-white">Mini Vector</span>
-  <input id="pname" value="Untitled" maxlength="100" class="num !w-40" title="Project name">
-  <label class="flex items-center gap-1.5"><input id="cg" type="checkbox" checked>Grid (shows at ≥ 800%)</label>
-  <label class="flex items-center gap-1.5"><input id="mg" type="checkbox" checked>Magnet grid</label>
-  <label class="flex items-center gap-1.5"><input id="mo" type="checkbox" checked>Object magnet</label>
-  <div class="ml-auto flex items-center gap-1">
-    <button id="undo" data-i="undo" class="px-2 py-1 rounded hover:bg-neutral-700" title="Undo (Ctrl+Z)"></button>
-    <button id="redo" data-i="redo" class="px-2 py-1 rounded hover:bg-neutral-700 mr-2" title="Redo (Ctrl+Shift+Z)"></button>
-    <button id="imgopen" class="px-2 py-1.5 rounded hover:bg-neutral-700" title="Local image library">Image</button>
-    <input id="imgfile" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp" multiple class="hidden">
-    <button id="zout" data-i="minus" class="px-2 py-1 rounded hover:bg-neutral-700"></button>
-    <button id="zreset" class="w-14 py-1 rounded hover:bg-neutral-700">100%</button>
-    <button id="zin" data-i="plus" class="px-2 py-1 rounded hover:bg-neutral-700"></button>
-    <button id="jnew" class="ml-3 px-2 py-1.5 rounded hover:bg-neutral-700">New</button>
-    <button id="jopen" class="px-2 py-1.5 rounded hover:bg-neutral-700">Open JSON</button>
-    <button id="jsave" class="px-2 py-1.5 rounded hover:bg-neutral-700" title="Ctrl+S">Save JSON</button>
-    <input id="jfile" type="file" accept=".json,application/json" class="hidden">
-    <button id="expcopy" class="px-2 py-1.5 rounded hover:bg-neutral-700" title="Copy selection as PNG">Copy PNG</button>
-    <button id="exp" class="ml-1 px-3 py-1.5 rounded bg-[#0d99ff] text-white">Export…</button>
-  </div>
-</header>
+<div id="app" class="grid grid-rows-[37px_1fr] h-screen w-screen">
 
-<main class="flex flex-1 min-h-0">
-  <aside class="w-60 bg-[#2c2c2c] border-r border-black flex flex-col">
-    <div class="px-3 py-2.5 font-semibold border-b border-neutral-700">Layers</div>
-    <ul id="layers" class="flex-1 overflow-auto"></ul>
-    <div class="px-3 py-2 border-t border-neutral-700 text-neutral-400 leading-relaxed">
-      Drag layers to reorder.
-      Double-click or F2 to rename.
-      Ctrl+] / [ move forward/backward, Ctrl+Shift+] / [ to front/back.
-      Ctrl+G = group,
-      Ctrl+Shift+G = ungroup, Ctrl+Z = undo.</div>
-  </aside>
-
-  <div id="wrap" class="flex-1 relative bg-[#1e1e1e] overflow-hidden">
-    <canvas id="cv" class="absolute inset-0"></canvas>
-    <div id="hint" class="absolute bottom-20 left-1/2 -translate-x-1/2 bg-black/60 rounded px-3 py-1.5 pointer-events-none whitespace-nowrap"></div>
-    <textarea id="textedit" rows="1" maxlength="10000" autocomplete="off" spellcheck="false" aria-label="Edit teks di kanvas"></textarea>
-    <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-[#2c2c2c] border border-black rounded-xl p-1.5 shadow-xl">
-      <button class="tool" data-t="select" data-i="select" title="Select (V)"></button>
-      <button class="tool" data-t="frame" data-i="frame" title="Frame (F)"></button>
-      <div class="relative flex items-center">
-        <button id="shapeBtn" data-i="rect" class="tool" data-t="rect"></button>
-        <button id="shapeMore" data-i="chevron" class="!px-1.5"></button>
-        <ul id="shapeMenu" style="display:none" class="absolute bottom-11 left-0 bg-[#2c2c2c] border border-black rounded-lg py-1 w-40 z-10">
-          <li data-s="rect">Rectangle (R)</li><li data-s="line">Line (L)</li><li data-s="ellipse">Ellipse / Oval (O)</li><li data-s="polygon">Polygon (Shift+R)</li><li data-s="star">Star (Shift+O)</li>
-        </ul>
-      </div>
-      <button class="tool" data-t="pen" data-i="pen" title="Pen (P)"></button>
-      <button class="tool" data-t="pencil" data-i="pencil" title="Pencil / freehand (B)"></button>
-      <button class="tool" data-t="text" data-i="text" title="Text (T)"></button>
-      <button class="tool" data-t="hand" data-i="hand" title="Hand mode (H)"></button>
+  <!-- 1. TOP NAVIGATION -->
+  <header id="topbar" class="flex items-stretch bg-panel border-b border-line min-w-0">
+    <button id="btn-toggle-left" class="drawer-btn" title="Layers" aria-label="Buka Layers"><svg><use href="#i-layers"/></svg></button>
+    <div id="file-name" class="flex items-center px-3 min-w-[84px] border-r border-line font-semibold bg-alt shadow-[inset_0_-2px_0_var(--accent)]">Untitled</div>
+    <button id="btn-new" title="File baru" class="self-center mx-2 w-[26px] h-[26px] grid place-items-center border border-line rounded-[3px] hover:bg-white/10"><svg><use href="#i-plus"/></svg></button>
+    <div class="tb-group">
+      <button id="btn-undo" class="tb-btn" title="Undo (Ctrl+Z)"><svg><use href="#i-undo"/></svg></button>
+      <button id="btn-redo" class="tb-btn" title="Redo (Ctrl+Y)"><svg><use href="#i-redo"/></svg></button>
     </div>
-  </div>
-
-  <aside class="w-60 bg-[#2c2c2c] border-l border-black props-scroll">
-    <div id="props" class="hidden">
-      <div id="ptype" class="mf-panel-title"></div>
-      <section class="mf-section" data-section="position">
-        <div class="mf-section-head"><span>Posisi</span><svg class="mf-section-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
-        <div class="mf-section-body">
-          <div><span class="mf-label">Sejajarkan</span><div id="al" class="mf-align"></div></div>
-          <div><span class="mf-label">Distribusikan jarak · pilih ≥ 3 objek</span><div class="mf-actions-row"><button id="distx" type="button" class="mf-icon-btn" title="Distribusikan horizontal" aria-label="Distribusikan horizontal"></button><button id="disty" type="button" class="mf-icon-btn" title="Distribusikan vertikal" aria-label="Distribusikan vertikal"></button><button id="flipx" type="button" class="mf-icon-btn" title="Balik horizontal" aria-label="Balik horizontal"></button><button id="flipy" type="button" class="mf-icon-btn" title="Balik vertikal" aria-label="Balik vertikal"></button></div></div>
-          <div class="mf-grid"><div id="pxslot"></div><div id="pyslot"></div><div id="protslot"></div><span></span></div>
-          <section class="mf-section mf-subsection" data-section="pivot"><div class="mf-section-head"><span>Pivot</span><svg class="mf-section-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2"/></svg></div><div class="mf-section-body mf-grid"><div id="ppxslot"></div><div id="ppyslot"></div></div></section>
-        </div>
-      </section>
-      <section class="mf-section" data-section="layout">
-        <div class="mf-section-head"><span>Tata letak</span><svg class="mf-section-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
-        <div class="mf-section-body">
-          <div class="flex items-center justify-between"><span class="mf-label !mb-0">Dimensi</span><button id="parBtn" type="button" class="mf-icon-btn" title="Kunci rasio aspek" aria-label="Kunci rasio aspek"><span id="parIcon"></span></button><input id="par" type="checkbox" class="mf-hidden"></div>
-          <div class="mf-grid"><div id="pwslot"></div><div id="phslot"></div><label id="rown" class="mf-field"><span class="mf-label">Sisi / titik</span><input id="pn" type="number" min="3" max="20" class="num"></label></div>
-        </div>
-      </section>
-      <section id="textsec" class="mf-section mf-hidden" data-section="text">
-        <div class="mf-section-head"><span>Tipografi</span><svg class="mf-section-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
-        <div class="mf-section-body">
-          <div id="tffslot"></div>
-          <div class="mf-grid"><div id="tfwslot"></div><button id="tfi" type="button" class="mf-icon-btn" title="Miring" aria-label="Miring">I</button></div>
-          <div class="mf-grid"><div id="tfsslot"></div><div id="tlhslot"></div></div>
-          <div id="tlsslot"></div>
-          <div><span class="mf-label">Rata horizontal</span><div id="talign" class="mf-segmented"></div></div>
-          <div><span class="mf-label">Rata vertikal</span><div id="tvalign" class="mf-segmented"></div></div>
-          <div class="mf-grid">
-            <div><span class="mf-label">Dekorasi</span><div id="tdecoration" class="mf-segmented"></div></div>
-            <div><span class="mf-label">Huruf</span><div id="tcase" class="mf-segmented"></div></div>
-          </div>
-          <div><span class="mf-label">Mode kotak teks</span><div id="tmode" class="mf-segmented"></div></div>
-        </div>
-      </section>
-      <section class="mf-section" data-section="appearance">
-        <div class="mf-section-head"><span>Tampilan</span><div class="mf-actions"><button id="peye" type="button" class="mf-icon-btn" title="Sembunyikan objek" aria-label="Sembunyikan objek"></button><button id="blendBtn" type="button" class="mf-icon-btn" title="Mode campuran" aria-label="Mode campuran"><span id="blendIcon"></span></button></div><svg class="mf-section-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
-        <div class="mf-section-body"><div class="mf-grid"><div id="popslot"></div><div id="prslot"></div></div><div id="rowradii" class="mf-grid mf-hidden"><div id="pr0slot"></div><div id="pr1slot"></div><div id="pr2slot"></div><div id="pr3slot"></div></div><div id="pbmslot" class="mf-hidden"></div></div>
-      </section>
-      <section class="mf-section" data-section="fill">
-        <div class="mf-section-head"><span>Isi</span><div class="mf-actions"><button id="fadd" type="button" class="mf-icon-btn" title="Tambah isi" aria-label="Tambah isi"></button></div><svg class="mf-section-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
-        <div id="frow" class="mf-section-body"></div>
-      </section>
-      <section class="mf-section" data-section="stroke">
-        <div class="mf-section-head"><span>Garis</span><div class="mf-actions"><button id="sadd" type="button" class="mf-icon-btn" title="Tambah garis" aria-label="Tambah garis"></button></div><svg class="mf-section-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
-        <div id="srow" class="mf-section-body"></div>
-      </section>
-      <section class="mf-section" data-section="palette">
-        <div class="mf-section-head"><span>Palet warna</span><div class="mf-actions"><button id="savecolor" type="button" class="mf-icon-btn" title="Simpan warna terpilih" aria-label="Simpan warna terpilih"></button></div><svg class="mf-section-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
-        <div id="paletteList" class="mf-section-body flex flex-wrap gap-1.5"></div>
-      </section>
-      <section class="mf-section" data-section="export">
-        <div class="mf-section-head"><span>Ekspor</span><svg class="mf-section-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
-        <div class="mf-section-body"><label class="mf-check"><span>Tampil di ekspor</span><input id="pexp" type="checkbox" checked class="mf-switch"></label></div>
-      </section>
-      <section id="fxsec" class="mf-section" data-section="effects">
-        <div class="mf-section-head"><span>Efek</span><div class="mf-actions"><button id="fxadd" type="button" class="mf-icon-btn" title="Tambah efek" aria-label="Tambah efek"></button></div><svg class="mf-section-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
-        <div id="fxlist" class="mf-section-body"></div>
-      </section>
+    <div class="tb-group">
+      <button id="btn-drive" class="tb-btn" title="Image Drive"><svg><use href="#i-drive"/></svg><span class="lbl">Drive</span></button>
+      <button id="btn-import" class="tb-btn" title="Import project"><svg><use href="#i-import"/></svg><span class="lbl">Import</span></button>
     </div>
-    <section id="framepanel" class="hidden">
-      <div class="px-3 py-2.5 font-semibold border-b border-neutral-700">Frame</div>
-      <div class="p-3 space-y-3 border-b border-neutral-700">
-        <label class="block">Category<select id="frameCategory" class="num mt-1"><option>Phone</option><option>Tablet</option><option>Desktop</option><option>Presentation</option><option>Watch</option><option>Paper</option><option>Social</option><option>Custom</option></select></label>
-        <label class="block">Preset<select id="framePreset" class="num mt-1"></select></label>
-        <div class="grid grid-cols-2 gap-2"><button id="frameApply" type="button" class="px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Apply preset</button><button id="frameRotate" type="button" class="px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Swap orientation</button></div>
-        <button id="frameSavePreset" type="button" class="w-full px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Save current frame size as preset</button>
-        <div class="grid grid-cols-2 gap-2"><label>Width<input id="frameW" type="number" min="1" max="10000" class="num"></label><label>Height<input id="frameH" type="number" min="1" max="10000" class="num"></label></div>
-      </div>
-      <div class="p-3 space-y-2 border-b border-neutral-700">
-        <div class="font-semibold">Structure</div>
-        <label id="frameClipRow" class="flex items-center gap-2"><input id="frameClip" type="checkbox" checked class="accent-[#0d99ff]">Clip content</label>
-        <button id="frameWrap" type="button" class="w-full px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Wrap selection in frame</button>
-        <button id="frameRelease" type="button" class="w-full px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Release frame, keep contents</button>
-        <button id="frameToGroup" type="button" class="w-full px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Convert frame to group</button>
-        <button id="groupToFrame" type="button" class="w-full px-2 py-1 rounded bg-[#383838] hover:bg-neutral-600">Convert group/selection to frame</button>
-      </div>
-      <div id="frameSmoothRow" class="p-3 border-b border-neutral-700">
-        <label class="block">Corner smoothing <span id="frameSmoothValue">0%</span><input id="frameSmooth" type="range" min="0" max="100" value="0" class="w-full accent-[#0d99ff]"></label>
-      </div>
-    </section>
-    <p id="empty" class="p-3 text-neutral-400">Select an object, or draw with the tool below the canvas.</p>
-  </aside>
-</main>
-
-<dialog id="imgdlg" class="bg-[#2c2c2c] text-neutral-200 border border-neutral-600 rounded-lg p-0 w-[min(560px,90vw)]">
-  <div class="p-3 border-b border-neutral-700 flex items-center gap-2">
-    <strong class="flex-1">Local image library</strong>
-    <span id="imgcount" class="text-neutral-400"></span>
-    <button id="imgupload" class="px-2 py-1 rounded bg-[#0d99ff] text-white">Upload</button>
-    <button id="imgclose" class="px-2 py-1 rounded hover:bg-neutral-700">Close</button>
-  </div>
-  <div id="imglib" class="p-3 grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[60vh] overflow-auto"></div>
-</dialog>
-
-<dialog id="fontdlg" class="bg-[#2c2c2c] text-neutral-200 border border-neutral-600 rounded-lg p-0 w-[min(520px,90vw)]">
-  <div class="p-3 border-b border-neutral-700 flex items-center gap-2">
-    <strong class="flex-1">Font lokal</strong>
-    <span id="fontcount" class="text-neutral-400"></span>
-    <button id="fontupload" class="px-2 py-1 rounded bg-[#0d99ff] text-white">Unggah TTF</button>
-    <button id="fontclose" class="px-2 py-1 rounded hover:bg-neutral-700">Tutup</button>
-  </div>
-  <p class="px-3 pt-3 text-neutral-400">Font disimpan di browser ini. Maksimal 1 MB per file dan 2 MB total.</p>
-  <div id="fontlist" class="p-3 space-y-2 max-h-[50vh] overflow-auto"></div>
-</dialog>
-<input id="fontfile" type="file" accept=".ttf,font/ttf,application/x-font-ttf" class="hidden">
-
-<dialog id="framePresetDlg" class="bg-[#2c2c2c] text-neutral-200 border border-neutral-600 rounded-lg p-0 w-[min(360px,90vw)]">
-  <div class="p-3 border-b border-neutral-700 font-semibold">Simpan preset frame</div>
-  <div class="p-3 space-y-3">
-    <label class="block">Nama preset<input id="framePresetName" maxlength="60" class="num mt-1" autocomplete="off"></label>
-    <div class="flex justify-end gap-2"><button id="framePresetCancel" type="button" class="px-3 py-1.5 rounded hover:bg-neutral-700">Batal</button><button id="framePresetConfirm" type="button" class="px-3 py-1.5 rounded bg-[#0d99ff] text-white">Simpan</button></div>
-  </div>
-</dialog>
-
-<dialog id="exportdlg" class="bg-[#2c2c2c] text-neutral-200 border border-neutral-600 rounded-lg p-0 w-[min(420px,90vw)]">
-  <form id="exportform" class="p-4 space-y-3">
-    <div class="flex items-center"><strong class="flex-1 text-base">Ekspor</strong><button id="exportclose" type="button" class="px-2 py-1 rounded hover:bg-neutral-700" aria-label="Tutup">Tutup</button></div>
-    <label class="block">Area
-      <select id="exportScope" class="num mt-1">
-        <option value="all">All visible objects</option>
-        <option value="selection">Selection</option>
-        <option value="frame">Frame</option>
+    <div class="flex-1"></div>
+    <div class="tb-group">
+      <button id="btn-help" class="tb-btn" title="Shortcut keyboard (?)" aria-label="Shortcut keyboard"><span style="font-weight:600">?</span></button>
+      <select id="zoom-select" title="Zoom" class="h-[26px] px-1 bg-alt border border-line rounded-[3px]">
+        <option>25%</option><option>50%</option><option selected>100%</option><option>150%</option><option>200%</option><option>Fit</option>
       </select>
-    </label>
-    <label id="exportFrameRow" class="hidden block">Frame
-      <select id="exportFrame" class="num mt-1"></select>
-    </label>
-    <div class="grid grid-cols-2 gap-2">
-      <label>Format
-        <select id="exportFormat" class="num mt-1">
-          <option value="png">PNG · transparent</option>
-          <option value="jpg">JPG · white background</option>
-          <option value="svg">SVG · embedded PNG</option>
-          <option value="pdf">PDF · raster</option>
-        </select>
-      </label>
-      <label>Scale
-        <select id="exportScale" class="num mt-1">
-          <option value="1">1×</option><option value="2">2×</option><option value="3">3×</option><option value="4">4×</option>
-        </select>
-      </label>
+      <button id="btn-save" class="tb-btn" title="Save / Export"><svg><use href="#i-save"/></svg><span class="lbl">Save</span></button>
     </div>
-    <p class="text-neutral-400 leading-relaxed">SVG and PDF preserve appearance as raster data. JPG and PDF use a white background.</p>
-    <div class="flex justify-end gap-2 pt-1">
-      <button id="exportcancel" type="button" class="px-3 py-1.5 rounded hover:bg-neutral-700">Cancel</button>
-      <button id="exportconfirm" type="submit" class="px-3 py-1.5 rounded bg-[#0d99ff] text-white">Export</button>
-    </div>
-  </form>
-</dialog>
+    <button id="btn-toggle-right" class="drawer-btn" title="Properti" aria-label="Buka panel Properti"><svg><use href="#i-sliders"/></svg></button>
+  </header>
 
-<script src="lib/jquery.min.js"></script>
-<script src="lib/tailwind.js"></script>
-<script src="js/inti.js"></script>
-<script src="js\kanvas\frame.js"></script>
-<script src="js\hierarki\hierarki.js"></script>
-<script src="js\kanvas\kanvas.js"></script>
-<script src="js/efek.js"></script>
-<script src="js/teks.js"></script>
-<script src="js/pena.js"></script>
-<script src="js\kanvas\transformasi.js"></script>
-<script src="js/alat.js"></script>
-<script src="js/layer.js"></script>
-<script src="js\panel\panel.js"></script>
-<script src="js/colors.js"></script>
-<script src="js/clipboard.js"></script>
-<script src="js/simpan.js"></script>
-<script src="js/performa.js"></script>
-<script src="js/export.js"></script>
-<script src="js/html.js"></script>
-<script src="js/main.js"></script>
+  <div id="main" class="grid grid-cols-[241px_minmax(0,1fr)_241px] min-h-0">
+
+    <!-- 2. LEFT SIDEBAR -->
+    <aside id="left-sidebar" class="flex flex-col bg-panel border-r border-line min-h-0">
+      <div class="flex items-center justify-between pt-2 px-2 pb-1.5 font-semibold">
+        <span>Layers</span>
+        <button id="btn-collapse-layers" title="Collapse semua" class="w-5 h-5 grid place-items-center rounded-[3px] text-mute hover:bg-white/10 hover:text-ink"><svg><use href="#i-layers"/></svg></button>
+      </div>
+      <div class="px-2 pb-2">
+        <input id="layer-search" type="search" placeholder="Search" autocomplete="off" class="w-full h-[22px] px-2 bg-alt border border-transparent rounded-[3px] outline-none placeholder:text-mute focus:border-accent">
+      </div>
+      <ul id="layer-list" class="flex-1 overflow-y-auto min-h-0 border-t border-line"></ul>
+      <div class="border-t border-line px-2 py-1">
+        <button id="btn-settings" class="flex items-center gap-2 w-full h-7 px-1.5 rounded-[3px] text-mute hover:bg-white/10 hover:text-ink"><svg><use href="#i-gear"/></svg>Settings</button>
+      </div>
+    </aside>
+
+    <!-- 3. CENTER -->
+    <main id="workspace" class="relative bg-bg min-w-0 min-h-0 overflow-hidden">
+      <canvas id="canvas" class="absolute inset-0 w-full h-full block"></canvas>
+      <div id="empty-state" class="absolute inset-0 grid place-items-center pointer-events-none text-mute"><span>Create a frame or select a tool to start designing</span></div>
+      <!-- 5. TOOLS (dibuat oleh jQuery di bawah; ukuran diatur --tool) -->
+      <nav id="toolbar" aria-label="Tools" class="absolute left-1/2 bottom-3.5 -translate-x-1/2 flex items-center gap-0.5 p-1 bg-panel border border-line rounded"></nav>
+    </main>
+
+    <!-- 4. RIGHT SIDEBAR -->
+    <aside id="right-sidebar" class="flex flex-col bg-panel border-l border-line min-h-0">
+      <div class="flex gap-2 p-2.5 border-b border-line" role="tablist">
+        <button id="tab-design" class="mode-tab active" data-mode="design" role="tab" aria-selected="true">Design</button>
+        <button id="tab-code" class="mode-tab" data-mode="code" role="tab" aria-selected="false">Code</button>
+      </div>
+      <div class="flex-1 overflow-y-auto min-h-0">
+        <div id="view-design"></div>
+        <div id="view-code" hidden>
+          <div class="code-block"><div class="font-semibold mb-1.5">HTML</div>
+            <pre id="code-html">&lt;div class="rectangle-106"&gt;&lt;/div&gt;</pre></div>
+          <div class="code-block"><div class="font-semibold mb-1.5">CSS</div>
+            <pre id="code-css">.rectangle-106 {
+  display: block;
+  position: absolute;
+  width: 120px;
+  height: 80px;
+  background: #D9D9D9;
+  border: 1px solid #000000;
+  border-radius: 10px;
+  opacity: 1;
+  transform: rotate(-33.94deg);
+}</pre></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- Latar gelap saat sidebar terbuka sebagai drawer (HP / tablet kecil) -->
+<div id="backdrop"></div>
+
+<!-- Panel daftar shortcut (tekan ? untuk membuka) -->
+<div id="help" role="dialog" aria-modal="true" aria-labelledby="help-title">
+  <div id="help-box">
+    <h2><span id="help-title">Shortcut keyboard</span><button id="help-close" aria-label="Tutup">✕</button></h2>
+    <h3>Alat</h3>
+    <div class="help-grid">
+      <div class="help-row"><span>Select</span><kbd>V</kbd></div>
+      <div class="help-row"><span>Hand (tahan untuk geser sementara)</span><kbd>H</kbd> / <kbd>Space</kbd></div>
+      <div class="help-row"><span>Frame</span><kbd>F</kbd></div>
+      <div class="help-row"><span>Rectangle</span><kbd>R</kbd></div>
+      <div class="help-row"><span>Ellipse</span><kbd>O</kbd></div>
+      <div class="help-row"><span>Line</span><kbd>L</kbd></div>
+      <div class="help-row"><span>Polygon</span><kbd>G</kbd></div>
+      <div class="help-row"><span>Star</span><kbd>S</kbd></div>
+      <div class="help-row"><span>Pen</span><kbd>P</kbd></div>
+      <div class="help-row"><span>Pencil</span><kbd>Shift</kbd>+<kbd>P</kbd></div>
+      <div class="help-row"><span>Text</span><kbd>T</kbd></div>
+      <div class="help-row"><span>Image</span><kbd>I</kbd></div>
+    </div>
+    <h3>File &amp; edit</h3>
+    <div class="help-grid">
+      <div class="help-row"><span>Undo</span><kbd>Ctrl</kbd>+<kbd>Z</kbd></div>
+      <div class="help-row"><span>Redo</span><kbd>Ctrl</kbd>+<kbd>Y</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></div>
+      <div class="help-row"><span>Save / Export</span><kbd>Ctrl</kbd>+<kbd>S</kbd></div>
+      <div class="help-row"><span>File baru</span><kbd>Alt</kbd>+<kbd>N</kbd></div>
+      <div class="help-row"><span>Image Drive</span><kbd>Alt</kbd>+<kbd>D</kbd></div>
+      <div class="help-row"><span>Import project</span><kbd>Alt</kbd>+<kbd>I</kbd></div>
+    </div>
+    <h3>Tampilan &amp; navigasi</h3>
+    <div class="help-grid">
+      <div class="help-row"><span>Zoom in / out</span><kbd>+</kbd> / <kbd>-</kbd></div>
+      <div class="help-row"><span>Zoom 100% / Fit</span><kbd>Shift</kbd>+<kbd>0</kbd> / <kbd>Shift</kbd>+<kbd>1</kbd></div>
+      <div class="help-row"><span>Layer sebelumnya / berikutnya</span><kbd>↑</kbd> / <kbd>↓</kbd></div>
+      <div class="help-row"><span>Cari layer</span><kbd>Ctrl</kbd>+<kbd>F</kbd></div>
+      <div class="help-row"><span>Panel Layers</span><kbd>Alt</kbd>+<kbd>L</kbd></div>
+      <div class="help-row"><span>Panel properti</span><kbd>Alt</kbd>+<kbd>R</kbd></div>
+      <div class="help-row"><span>Tab Design / Code</span><kbd>Alt</kbd>+<kbd>1</kbd> / <kbd>Alt</kbd>+<kbd>2</kbd></div>
+      <div class="help-row"><span>Tutup panel / kembali ke Select</span><kbd>Esc</kbd></div>
+      <div class="help-row"><span>Buka daftar ini</span><kbd>?</kbd></div>
+    </div>
+  </div>
+</div>
+
+<script src="libs/jquery.min.js"></script>
+<script>
+/* UI-only. Saat disambung ke panel.js / alat.js / layer.js, hapus bagian yang sudah ditangani
+   file tersebut agar tidak ada event listener ganda. Semua id/class dipertahankan. */
+$(function () {
+  const ico = n => `<svg><use href="#i-${n}"/></svg>`;
+
+  // Tools: [data-tool, ikon, judul]; null = pemisah
+  const tools = [
+    ['select','select','Select (V)'], ['hand','hand','Hand (H)'], null,
+    ['frame','frame','Frame (F)'], ['rectangle','rect','Rectangle (R)'], ['ellipse','ellipse','Ellipse (O)'],
+    ['line','line','Line (L)'], ['polygon','polygon','Polygon'], ['star','star','Star'], null,
+    ['pen','pen','Pen (P)'], ['pencil','pencil','Pencil (Shift+P)'], ['text','text','Text (T)'], ['image','image','Image']
+  ];
+  $('#toolbar').html(tools.map(t => t
+    ? `<button class="tool${t[0]==='select'?' active':''}" data-tool="${t[0]}" title="${t[2]}" aria-label="${t[2]}">${ico(t[1])}</button>`
+    : '<span class="w-px h-[18px] bg-line mx-1"></span>').join(''));
+
+  // Section Design: [id, judul, baris[ [label,id,nilai,tipe] ... ]]
+  const f = (l,id,v,t='number') => `<label class="field"><span>${l}</span><input id="${id}" type="${t}" value="${v}"></label>`;
+  const sections = [
+    ['layout','Layout',[ [['X','prop-x',0],['Y','prop-y',0]], [['W','prop-w',120],['H','prop-h',80]], [['R','prop-rotation',0]] ]],
+    ['appearance','Appearance',[ [['Opacity','prop-opacity',100],['Radius','prop-radius',0]] ]],
+    ['typography','Typography',[ [['Font','prop-font','Inter','text']], [['Size','prop-fontsize',16],['Weight','prop-fontweight',400]] ]],
+    ['fill','Fill',[ [['Color','prop-fill','#D9D9D9','color']] ]],
+    ['stroke','Stroke',[ [['Color','prop-stroke','#000000','color'],['Width','prop-strokewidth',1]] ]],
+    ['effects','Effects',[ [['Blur','prop-blur',0],['Shadow','prop-shadow',0]] ]],
+    ['export','Export',[ [['Scale','export-scale',1]] ]]
+  ];
+  $('#view-design').html(sections.map(([id,title,rows]) => `
+    <section>
+      <button class="acc-head" aria-expanded="false" aria-controls="sec-${id}">${title}${ico('chev')}</button>
+      <div class="acc-body" id="sec-${id}" hidden>${rows.map(r => `<div class="row">${r.map(x => f(...x)).join('')}</div>`).join('')}
+        ${id==='export' ? '<button id="btn-export" class="tb-btn border border-line bg-panel justify-self-start">Export PNG</button>' : ''}
+      </div>
+    </section>`).join(''));
+
+  // Layer contoh: [nama, ikon, depth, selected] — hapus saat disambung ke layer.js
+  const layers = [['Frame 1','frame',0],['Rectangle 106','rect',1,1],['Text','text',1]];
+  $('#layer-list').html(layers.map(l =>
+    `<li class="layer${l[3]?' selected':''}" style="--depth:${l[2]}">${ico(l[1])}<span class="flex-1 truncate">${l[0]}</span></li>`).join(''));
+
+  // Accordion
+  $('#view-design').on('click', '.acc-head', function () {
+    const open = $(this).attr('aria-expanded') === 'true';
+    $(this).attr('aria-expanded', !open);
+    $('#' + $(this).attr('aria-controls')).prop('hidden', open);
+  });
+
+  // Tab Design / Code
+  $('.mode-tab').on('click', function () {
+    const mode = $(this).data('mode');
+    $('.mode-tab').removeClass('active').attr('aria-selected', false);
+    $(this).addClass('active').attr('aria-selected', true);
+    $('#view-design').prop('hidden', mode !== 'design');
+    $('#view-code').prop('hidden', mode !== 'code');
+  });
+
+  // Tool aktif
+  $('#toolbar').on('click', '.tool', function () {
+    $('#toolbar .tool').removeClass('active'); $(this).addClass('active');
+  });
+
+  // Layer: pilih + search
+  $('#layer-list').on('click', '.layer', function () {
+    $('#layer-list .layer').removeClass('selected'); $(this).addClass('selected');
+  });
+  $('#layer-search').on('input', function () {
+    const q = this.value.trim().toLowerCase();
+    $('#layer-list .layer').each(function () { $(this).toggle($(this).text().toLowerCase().includes(q)); });
+  });
+
+  // Empty state: tampil jika tidak ada layer
+  const syncEmpty = () => $('#empty-state').toggleClass('hidden', $('#layer-list').children().length > 0);
+  new MutationObserver(syncEmpty).observe($('#layer-list')[0], { childList: true });
+  syncEmpty();
+
+  // Drawer sidebar untuk layar kecil (< 900px)
+  const closeDrawers = () => $('body').removeClass('show-left show-right');
+  $('#btn-toggle-left').on('click',  () => $('body').toggleClass('show-left').removeClass('show-right'));
+  $('#btn-toggle-right').on('click', () => $('body').toggleClass('show-right').removeClass('show-left'));
+  $('#backdrop').on('click', closeDrawers);
+  $(document).on('keydown', e => { if (e.key === 'Escape') closeDrawers(); });
+  window.matchMedia('(min-width: 900px)').addEventListener('change', e => { if (e.matches) closeDrawers(); });
+
+  /* ================= SHORTCUT KEYBOARD =================
+     Semua shortcut hanya meng-klik tombol/elemen yang sudah ada, jadi otomatis
+     ikut bekerja saat panel.js / alat.js / layer.js dipasang.
+     Dinonaktifkan saat mengetik di input / select / textarea / teks editable. */
+  const SMALL = window.matchMedia('(max-width: 899px)');
+  const toolKeys = {
+    KeyV:'select', KeyH:'hand', KeyF:'frame', KeyR:'rectangle', KeyO:'ellipse',
+    KeyL:'line', KeyG:'polygon', KeyS:'star', KeyP:'pen', KeyT:'text', KeyI:'image'
+  };
+  const pickTool = name => $(`#toolbar .tool[data-tool="${name}"]`).trigger('click');
+  const currentTool = () => $('#toolbar .tool.active').data('tool');
+  const typing = t => t && (/^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName) || t.isContentEditable);
+  const helpOpen = () => $('#help').hasClass('open');
+  const toggleHelp = open => $('#help').toggleClass('open', open);
+  const relayout = () => setTimeout(() => $(window).trigger('resize'), 0);
+
+  // Zoom: geser pilihan di #zoom-select (angka saja, "Fit" dilewati)
+  const stepZoom = dir => {
+    const $s = $('#zoom-select'), opts = $s.find('option').toArray().filter(o => /%$/.test(o.text));
+    const i = opts.findIndex(o => o.selected), n = Math.min(opts.length - 1, Math.max(0, (i < 0 ? 0 : i) + dir));
+    $s.val(opts[n].value || opts[n].text).trigger('change');
+  };
+  const setZoom = label => $('#zoom-select').val(label).trigger('change');
+
+  // Layer sebelumnya / berikutnya (lewati layer yang disembunyikan oleh pencarian)
+  const stepLayer = dir => {
+    const $all = $('#layer-list .layer:visible'); if (!$all.length) return;
+    const i = $all.index($all.filter('.selected').first());
+    $all.eq(Math.min($all.length - 1, Math.max(0, i < 0 ? (dir > 0 ? 0 : $all.length - 1) : i + dir))).trigger('click')[0]
+      .scrollIntoView({ block: 'nearest' });
+  };
+
+  const togglePanel = side => {
+    if (SMALL.matches) { $('body').toggleClass('show-' + side).removeClass(side === 'left' ? 'show-right' : 'show-left'); }
+    else { $('body').toggleClass('hide-' + side); relayout(); }
+  };
+
+  let prevTool = null;   // untuk Space = hand sementara
+
+  $(document).on('keydown', function (e) {
+    if (typing(e.target) && e.key !== 'Escape') return;
+    const ctrl = e.ctrlKey || e.metaKey;
+
+    // Panel bantuan
+    if (e.key === '?' ) { e.preventDefault(); toggleHelp(); return; }
+    if (e.key === 'Escape') {
+      if (helpOpen()) { toggleHelp(false); return; }
+      if ($('body').is('.show-left,.show-right')) { closeDrawers(); return; }
+      if (typing(e.target)) { e.target.blur(); return; }
+      pickTool('select'); return;
+    }
+    if (helpOpen()) return;
+
+    // Ctrl/Cmd + ...
+    if (ctrl && !e.altKey) {
+      switch (e.code) {
+        case 'KeyZ': e.preventDefault(); $(e.shiftKey ? '#btn-redo' : '#btn-undo').trigger('click'); return;
+        case 'KeyY': e.preventDefault(); $('#btn-redo').trigger('click'); return;
+        case 'KeyS': e.preventDefault(); $('#btn-save').trigger('click'); return;
+        case 'KeyF': e.preventDefault(); if (SMALL.matches) $('body').addClass('show-left').removeClass('show-right');
+                     else $('body').removeClass('hide-left');
+                     $('#layer-search').trigger('focus').trigger('select'); return;
+      }
+      return;
+    }
+
+    // Alt + ...
+    if (e.altKey && !ctrl) {
+      const acts = {
+        KeyN: () => $('#btn-new').trigger('click'),
+        KeyD: () => $('#btn-drive').trigger('click'),
+        KeyI: () => $('#btn-import').trigger('click'),
+        KeyL: () => togglePanel('left'),
+        KeyR: () => togglePanel('right'),
+        Digit1: () => { if (SMALL.matches) $('body').addClass('show-right').removeClass('show-left'); else $('body').removeClass('hide-right'); $('#tab-design').trigger('click'); },
+        Digit2: () => { if (SMALL.matches) $('body').addClass('show-right').removeClass('show-left'); else $('body').removeClass('hide-right'); $('#tab-code').trigger('click'); }
+      };
+      if (acts[e.code]) { e.preventDefault(); acts[e.code](); }
+      return;
+    }
+
+    // Tombol tunggal
+    if (e.code === 'Space') {
+      e.preventDefault();
+      if (!e.repeat && currentTool() !== 'hand') { prevTool = currentTool(); pickTool('hand'); }
+      return;
+    }
+    if (e.shiftKey && e.code === 'KeyP') { e.preventDefault(); pickTool('pencil'); return; }
+    if (e.shiftKey && e.code === 'Digit0') { e.preventDefault(); setZoom('100%'); return; }
+    if (e.shiftKey && e.code === 'Digit1') { e.preventDefault(); setZoom('Fit'); return; }
+    if (e.key === '+' || e.key === '=') { e.preventDefault(); stepZoom(1); return; }
+    if (e.key === '-' || e.key === '_') { e.preventDefault(); stepZoom(-1); return; }
+    if (e.key === 'ArrowDown') { e.preventDefault(); stepLayer(1); return; }
+    if (e.key === 'ArrowUp')   { e.preventDefault(); stepLayer(-1); return; }
+    if (!e.shiftKey && toolKeys[e.code]) { e.preventDefault(); pickTool(toolKeys[e.code]); }
+  });
+
+  $(document).on('keyup', function (e) {
+    if (e.code === 'Space' && prevTool) { pickTool(prevTool); prevTool = null; }
+  });
+  $(window).on('blur', () => { if (prevTool) { pickTool(prevTool); prevTool = null; } });
+
+  // Panel bantuan: tombol buka / tutup
+  $('#btn-help').on('click', () => toggleHelp());
+  $('#help-close').on('click', () => toggleHelp(false));
+  $('#help').on('click', e => { if (e.target.id === 'help') toggleHelp(false); });
+});
+</script>
 </body>
 </html>

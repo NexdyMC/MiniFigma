@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mini Vector</title>
 <link rel="stylesheet" href="libs/tailwind.css">
+<!-- Font Awesome (CDN) untuk ikon panel properti -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
 
 <!-- ============================================================
      RESPONSIVE + UKURAN NYAMAN
@@ -140,6 +142,74 @@
   .help-row { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-bottom: 1px solid rgba(255, 255, 255, .06); }
   kbd { font-family: inherit; font-size: var(--fs-sm); padding: 1px 7px; border: 1px solid var(--line, #555); border-radius: 4px;
     background: rgba(255, 255, 255, .06); white-space: nowrap; }
+
+  /* ============================================================
+     PANEL PROPERTI ala Figma (prototype, belum tersambung ke JS)
+     Semua class diawali "fg-" supaya tidak bentrok dengan tailwind.css
+     ============================================================ */
+  #view-design {
+    --fg-input: #383838; --fg-hover: rgba(255,255,255,.09); --fg-line: #444;
+    --fg-text: #fff; --fg-mute: #a3a3a3; --fg-accent: #0d99ff;
+  }
+  .fg-sec { padding: 10px 14px 14px; border-bottom: 1px solid var(--fg-line); color: var(--fg-text); }
+  .fg-head { display: flex; align-items: center; justify-content: space-between; min-height: var(--ctl);
+    margin-bottom: 4px; font-weight: 600; font-size: var(--fs); }
+  .fg-actions { display: flex; align-items: center; gap: 2px; }
+  .fg-ib { display: grid; place-items: center; width: var(--ctl); height: var(--ctl); flex: none; border-radius: 5px;
+    color: #d0d0d0; font-size: calc(var(--ico) - 4px); background: transparent; border: 0; cursor: pointer; }
+  .fg-ib:hover { background: var(--fg-hover); color: #fff; }
+  .fg-label { font-size: var(--fs-sm); color: var(--fg-mute); margin: 12px 0 6px; font-weight: 500; }
+  .fg-label:first-of-type { margin-top: 6px; }
+  .fg-grid { display: grid; gap: 8px; grid-template-columns: 1fr 1fr; align-items: center; }
+  .fg-grid.three { grid-template-columns: 1fr 1fr var(--ctl); }
+  .fg-grid.fill  { grid-template-columns: minmax(0,1fr) var(--ctl) var(--ctl); gap: 4px; }
+  .fg-grid > .fg-label { margin: 10px 0 0; }
+
+  /* kotak input: label/ikon di kiri, nilai di kanan */
+  .fg-in { display: flex; align-items: center; gap: 8px; height: var(--ctl); padding: 0 10px; min-width: 0;
+    background: var(--fg-input); border: 1px solid transparent; border-radius: 5px; color: var(--fg-text); }
+  .fg-in:hover { border-color: #555; }
+  .fg-in:focus-within { border-color: var(--fg-accent); }
+  .fg-in > i, .fg-in > .lb { flex: none; width: 1.2em; text-align: center; color: var(--fg-mute); font-size: var(--fs-sm); }
+  .fg-in input, .fg-in select { flex: 1; min-width: 0; width: 100%; height: 100%; padding: 0; background: transparent; border: 0;
+    outline: 0; color: var(--fg-text); font-size: var(--fs); font-weight: 600; font-family: inherit; appearance: none; -moz-appearance: textfield; }
+  .fg-in input::-webkit-outer-spin-button, .fg-in input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .fg-in .end { flex: none; color: var(--fg-mute); font-size: var(--fs-sm); }
+
+  /* grup tombol (segmented) */
+  .fg-seg { display: flex; align-items: center; height: var(--ctl); background: var(--fg-input); border-radius: 5px; padding: 2px; }
+  .fg-seg .fg-ib { flex: 1; width: auto; height: 100%; }
+  .fg-seg .fg-ib.on { background: rgba(255,255,255,.14); color: #fff; }
+
+  /* baris warna (Fill / Stroke) */
+  .fg-color { display: flex; align-items: center; gap: 8px; height: var(--ctl); padding: 0 10px; min-width: 0;
+    background: var(--fg-input); border: 1px solid transparent; border-radius: 5px; }
+  .fg-color:focus-within { border-color: var(--fg-accent); }
+  .fg-color input[type="color"] { flex: none; width: calc(var(--ico) + 2px); height: calc(var(--ico) + 2px); padding: 0; border: 1px solid #666;
+    border-radius: 4px; background: none; cursor: pointer; appearance: none; -webkit-appearance: none; }
+  .fg-color input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+  .fg-color input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 3px; }
+  .fg-color input[type="color"]::-moz-color-swatch { border: 0; border-radius: 3px; }
+  .fg-color .hex { flex: 1; min-width: 0; width: 100%; background: transparent; border: 0; outline: 0; color: var(--fg-text);
+    font-size: var(--fs); font-weight: 600; text-transform: uppercase; }
+  .fg-color .op { width: 3.2em; flex: none; background: transparent; border: 0; outline: 0; text-align: right; color: var(--fg-text);
+    font-size: var(--fs); font-weight: 600; -moz-appearance: textfield; }
+  .fg-color .op::-webkit-outer-spin-button, .fg-color .op::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .fg-color .pc { color: var(--fg-mute); font-size: var(--fs-sm); }
+
+  /* accordion (Stroke, Effects, Export) */
+  .fg-acc { padding-top: 4px; padding-bottom: 4px; }
+  .fg-acc .fg-head { margin-bottom: 0; }
+  .fg-acc-toggle { flex: 1; display: flex; align-items: center; min-height: var(--ctl); text-align: left; font-weight: 600;
+    font-size: var(--fs); color: inherit; background: transparent; border: 0; cursor: pointer; }
+  .fg-acc .fg-chev i { transition: transform .15s ease; }
+  .fg-acc.open .fg-chev i { transform: rotate(90deg); }
+  .fg-body { padding: 4px 0 12px; }
+  .fg-body[hidden] { display: none; }
+  .fg-btn { min-height: var(--ctl); padding: 0 14px; border: 1px solid #555; border-radius: 5px; background: transparent;
+    color: var(--fg-text); font-size: var(--fs); font-weight: 600; cursor: pointer; }
+  .fg-btn:hover { background: var(--fg-hover); }
+  @media (prefers-reduced-motion: reduce) { .fg-acc .fg-chev i { transition: none; } }
 </style>
 </head>
 <body>
@@ -169,7 +239,7 @@
   <symbol id="i-image" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10"/><circle cx="6" cy="7" r="1"/><path d="m2 12 4-3 3 2 5-4"/></symbol>
 </defs></svg>
 
-<div id="app" class="grid grid-rows-[37px_1fr] h-screen w-screen">
+<div id="app" class="grid grid-rows-[32px_1fr] h-screen w-screen">
 
   <!-- 1. TOP NAVIGATION -->
   <header id="topbar" class="flex items-stretch bg-panel border-b border-line min-w-0">
@@ -195,7 +265,8 @@
     <button id="btn-toggle-right" class="drawer-btn" title="Properti" aria-label="Buka panel Properti"><svg><use href="#i-sliders"/></svg></button>
   </header>
 
-  <div id="main" class="grid grid-cols-[241px_minmax(0,1fr)_241px] min-h-0">
+  <div id="main" class="grid grid-cols-[160px_100%_160px] min-h-0">
+  <!-- <div id="main" class="grid grid-cols-[200px_minmax(0,1fr)_200px] min-h-0"> -->
 
     <!-- 2. LEFT SIDEBAR -->
     <aside id="left-sidebar" class="flex flex-col bg-panel border-r border-line min-h-0">
@@ -216,18 +287,184 @@
     <main id="workspace" class="relative bg-bg min-w-0 min-h-0 overflow-hidden">
       <canvas id="canvas" class="absolute inset-0 w-full h-full block"></canvas>
       <div id="empty-state" class="absolute inset-0 grid place-items-center pointer-events-none text-mute"><span>Create a frame or select a tool to start designing</span></div>
-      <!-- 5. TOOLS (dibuat oleh jQuery di bawah; ukuran diatur --tool) -->
       <nav id="toolbar" aria-label="Tools" class="absolute left-1/2 bottom-3.5 -translate-x-1/2 flex items-center gap-0.5 p-1 bg-panel border border-line rounded"></nav>
     </main>
 
     <!-- 4. RIGHT SIDEBAR -->
-    <aside id="right-sidebar" class="flex flex-col bg-panel border-l border-line min-h-0">
+    <aside id="right-sidebar" class="flex flex-col bg-panel border-l border-line  min-h-0">
       <div class="flex gap-2 p-2.5 border-b border-line" role="tablist">
         <button id="tab-design" class="mode-tab active" data-mode="design" role="tab" aria-selected="true">Design</button>
         <button id="tab-code" class="mode-tab" data-mode="code" role="tab" aria-selected="false">Code</button>
       </div>
       <div class="flex-1 overflow-y-auto min-h-0">
-        <div id="view-design"></div>
+        <div id="view-design">
+
+          <!-- POSITION -->
+          <section class="fg-sec">
+            <div class="fg-head"><span>Position</span></div>
+            <div class="fg-label">Alignment</div>
+            <div class="fg-grid">
+              <div class="fg-seg">
+                <button class="fg-ib" title="Align left"><i class="fa-solid fa-align-left"></i></button>
+                <button class="fg-ib" title="Align horizontal center"><i class="fa-solid fa-align-center"></i></button>
+                <button class="fg-ib" title="Align right"><i class="fa-solid fa-align-right"></i></button>
+              </div>
+              <div class="fg-seg">
+                <button class="fg-ib" title="Align top"><i class="fa-solid fa-align-left fa-rotate-90"></i></button>
+                <button class="fg-ib" title="Align vertical center"><i class="fa-solid fa-align-center fa-rotate-90"></i></button>
+                <button class="fg-ib" title="Align bottom"><i class="fa-solid fa-align-right fa-rotate-90"></i></button>
+              </div>
+            </div>
+            <div class="fg-label">Position</div>
+            <div class="fg-grid">
+              <label class="fg-in"><span class="lb">X</span><input id="prop-x" type="number" value="0"></label>
+              <label class="fg-in"><span class="lb">Y</span><input id="prop-y" type="number" value="0"></label>
+            </div>
+            <div class="fg-label">Rotation</div>
+            <div class="fg-grid">
+              <label class="fg-in"><i class="fa-solid fa-angle-left fa-rotate-by" style="--fa-rotate-angle:-45deg"></i><input id="prop-rotation" type="number" value="0"><span class="end">°</span></label>
+              <div class="fg-seg">
+                <button class="fg-ib" title="Putar 90°"><i class="fa-solid fa-rotate-right"></i></button>
+                <button class="fg-ib" title="Flip horizontal"><i class="fa-solid fa-left-right"></i></button>
+                <button class="fg-ib" title="Flip vertical"><i class="fa-solid fa-up-down"></i></button>
+              </div>
+            </div>
+          </section>
+
+          <!-- LAYOUT -->
+          <section class="fg-sec">
+            <div class="fg-head"><span>Layout</span></div>
+            <div class="fg-label">Dimensions</div>
+            <div class="fg-grid three">
+              <label class="fg-in"><span class="lb">W</span><input id="prop-w" type="number" value="120"></label>
+              <label class="fg-in"><span class="lb">H</span><input id="prop-h" type="number" value="80"></label>
+              <button class="fg-ib" title="Pertahankan rasio / resize to fit" style="background:var(--fg-input)"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></button>
+            </div>
+          </section>
+
+          <!-- APPEARANCE -->
+          <section class="fg-sec">
+            <div class="fg-head"><span>Appearance</span>
+              <div class="fg-actions">
+                <button class="fg-ib" title="Tampilkan / sembunyikan"><i class="fa-regular fa-eye"></i></button>
+                <button class="fg-ib" title="Blend mode"><i class="fa-solid fa-droplet"></i></button>
+              </div>
+            </div>
+            <div class="fg-grid three">
+              <div class="fg-label" style="margin:6px 0 0">Opacity</div>
+              <div class="fg-label" style="margin:6px 0 0">Corner radius</div>
+              <span></span>
+              <label class="fg-in"><i class="fa-solid fa-chess-board"></i><input id="prop-opacity" type="number" value="100"><span class="end">%</span></label>
+              <label class="fg-in"><i class="fa-solid fa-vector-square"></i><input id="prop-radius" type="number" value="0"></label>
+              <button class="fg-ib" title="Radius per sudut"><i class="fa-solid fa-sliders"></i></button>
+              <div class="fg-label">Count</div>
+              <div class="fg-label">Ratio</div>
+              <span></span>
+              <label class="fg-in"><i class="fa-solid fa-asterisk"></i><input id="prop-count" type="number" value="5"></label>
+              <label class="fg-in"><i class="fa-solid fa-play"></i><input id="prop-ratio" type="number" value="38.2"><span class="end">%</span></label>
+              <span></span>
+            </div>
+          </section>
+
+          <!-- TYPOGRAPHY -->
+          <section class="fg-sec">
+            <div class="fg-head"><span>Typography</span>
+              <div class="fg-actions"><button class="fg-ib" title="Pengaturan teks"><i class="fa-solid fa-ellipsis"></i></button></div>
+            </div>
+            <label class="fg-in"><input id="prop-font" type="text" value="Inter"><i class="fa-solid fa-chevron-down" style="width:auto"></i></label>
+            <div class="fg-grid" style="margin-top:8px">
+              <label class="fg-in"><input id="prop-fontweight" type="number" value="400"><i class="fa-solid fa-chevron-down" style="width:auto"></i></label>
+              <label class="fg-in"><i class="fa-solid fa-text-height"></i><input id="prop-fontsize" type="number" value="16"></label>
+              <label class="fg-in"><i class="fa-solid fa-arrows-up-down"></i><input id="prop-lineheight" type="text" value="Auto"></label>
+              <label class="fg-in"><i class="fa-solid fa-text-width"></i><input id="prop-letterspacing" type="number" value="0"><span class="end">%</span></label>
+            </div>
+            <div class="fg-grid" style="margin-top:8px">
+              <div class="fg-seg">
+                <button class="fg-ib on" title="Rata kiri"><i class="fa-solid fa-align-left"></i></button>
+                <button class="fg-ib" title="Rata tengah"><i class="fa-solid fa-align-center"></i></button>
+                <button class="fg-ib" title="Rata kanan"><i class="fa-solid fa-align-right"></i></button>
+                <button class="fg-ib" title="Rata kiri-kanan"><i class="fa-solid fa-align-justify"></i></button>
+              </div>
+              <div class="fg-seg">
+                <button class="fg-ib" title="Underline"><i class="fa-solid fa-underline"></i></button>
+                <button class="fg-ib" title="Strikethrough"><i class="fa-solid fa-strikethrough"></i></button>
+                <button class="fg-ib" title="Italic"><i class="fa-solid fa-italic"></i></button>
+              </div>
+            </div>
+          </section>
+
+          <!-- FILL -->
+          <section class="fg-sec">
+            <div class="fg-head"><span>Fill</span>
+              <div class="fg-actions">
+                <button class="fg-ib" title="Styles & variables"><i class="fa-solid fa-table-cells-large"></i></button>
+                <button class="fg-ib" title="Tambah fill"><i class="fa-solid fa-plus"></i></button>
+              </div>
+            </div>
+            <div class="fg-grid fill">
+              <div class="fg-color"><input type="color" id="prop-fill" value="#d9d9d9"><input class="hex" id="prop-fill-hex" value="d9d9d9" maxlength="6" spellcheck="false"><input class="op" id="prop-fill-opacity" type="number" value="100"><span class="pc">%</span></div>
+              <button class="fg-ib" title="Tampilkan / sembunyikan"><i class="fa-regular fa-eye"></i></button>
+              <button class="fg-ib" title="Hapus"><i class="fa-solid fa-minus"></i></button>
+            </div>
+          </section>
+
+          <!-- STROKE (accordion) -->
+          <section class="fg-sec fg-acc">
+            <div class="fg-head">
+              <button class="fg-acc-toggle" aria-expanded="false" aria-controls="sec-stroke">Stroke</button>
+              <div class="fg-actions">
+                <button class="fg-ib fg-add" title="Tambah stroke"><i class="fa-solid fa-plus"></i></button>
+                <button class="fg-ib fg-chev fg-acc-toggle" style="flex:none" aria-controls="sec-stroke" aria-label="Buka / tutup Stroke"><i class="fa-solid fa-chevron-right"></i></button>
+              </div>
+            </div>
+            <div class="fg-body" id="sec-stroke" hidden>
+              <div class="fg-grid fill">
+              <div class="fg-color"><input type="color" id="prop-stroke" value="#000000"><input class="hex" id="prop-stroke-hex" value="000000" maxlength="6" spellcheck="false"><input class="op" id="prop-stroke-opacity" type="number" value="100"><span class="pc">%</span></div>
+              <button class="fg-ib" title="Tampilkan / sembunyikan"><i class="fa-regular fa-eye"></i></button>
+              <button class="fg-ib" title="Hapus"><i class="fa-solid fa-minus"></i></button>
+            </div>
+              <div class="fg-grid" style="margin-top:8px">
+                <label class="fg-in"><i class="fa-solid fa-border-all"></i><input id="prop-strokewidth" type="number" value="1"></label>
+                <label class="fg-in"><i class="fa-regular fa-square"></i><input type="text" value="Inside" readonly></label>
+              </div>
+            </div>
+          </section>
+
+          <!-- EFFECTS (accordion) -->
+          <section class="fg-sec fg-acc">
+            <div class="fg-head">
+              <button class="fg-acc-toggle" aria-expanded="false" aria-controls="sec-effects">Effects</button>
+              <div class="fg-actions">
+                <button class="fg-ib fg-add" title="Tambah efek"><i class="fa-solid fa-plus"></i></button>
+                <button class="fg-ib fg-chev fg-acc-toggle" style="flex:none" aria-controls="sec-effects" aria-label="Buka / tutup Effects"><i class="fa-solid fa-chevron-right"></i></button>
+              </div>
+            </div>
+            <div class="fg-body" id="sec-effects" hidden>
+              <div class="fg-grid">
+                <label class="fg-in"><i class="fa-solid fa-droplet"></i><input id="prop-blur" type="number" value="0"></label>
+                <label class="fg-in"><i class="fa-regular fa-clone"></i><input id="prop-shadow" type="number" value="0"></label>
+              </div>
+            </div>
+          </section>
+
+          <!-- EXPORT (accordion) -->
+          <section class="fg-sec fg-acc">
+            <div class="fg-head">
+              <button class="fg-acc-toggle" aria-expanded="false" aria-controls="sec-export">Export</button>
+              <div class="fg-actions">
+                <button class="fg-ib fg-add" title="Tambah export"><i class="fa-solid fa-plus"></i></button>
+                <button class="fg-ib fg-chev fg-acc-toggle" style="flex:none" aria-controls="sec-export" aria-label="Buka / tutup Export"><i class="fa-solid fa-chevron-right"></i></button>
+              </div>
+            </div>
+            <div class="fg-body" id="sec-export" hidden>
+              <div class="fg-grid">
+                <label class="fg-in"><i class="fa-solid fa-maximize"></i><input id="export-scale" type="number" value="1" step="0.25"><span class="end">x</span></label>
+                <label class="fg-in"><i class="fa-regular fa-image"></i><input type="text" value="PNG" readonly></label>
+              </div>
+              <button id="btn-export" class="fg-btn" style="margin-top:10px;width:100%"><i class="fa-solid fa-download" style="margin-right:8px"></i>Export PNG</button>
+            </div>
+          </section>
+        </div>
         <div id="view-code" hidden>
           <div class="code-block"><div class="font-semibold mb-1.5">HTML</div>
             <pre id="code-html">&lt;div class="rectangle-106"&gt;&lt;/div&gt;</pre></div>
@@ -242,7 +479,7 @@
   border-radius: 10px;
   opacity: 1;
   transform: rotate(-33.94deg);
-}</pre></div>
+}   </pre></div>
         </div>
       </div>
     </aside>
@@ -313,35 +550,28 @@ $(function () {
     ? `<button class="tool${t[0]==='select'?' active':''}" data-tool="${t[0]}" title="${t[2]}" aria-label="${t[2]}">${ico(t[1])}</button>`
     : '<span class="w-px h-[18px] bg-line mx-1"></span>').join(''));
 
-  // Section Design: [id, judul, baris[ [label,id,nilai,tipe] ... ]]
-  const f = (l,id,v,t='number') => `<label class="field"><span>${l}</span><input id="${id}" type="${t}" value="${v}"></label>`;
-  const sections = [
-    ['layout','Layout',[ [['X','prop-x',0],['Y','prop-y',0]], [['W','prop-w',120],['H','prop-h',80]], [['R','prop-rotation',0]] ]],
-    ['appearance','Appearance',[ [['Opacity','prop-opacity',100],['Radius','prop-radius',0]] ]],
-    ['typography','Typography',[ [['Font','prop-font','Inter','text']], [['Size','prop-fontsize',16],['Weight','prop-fontweight',400]] ]],
-    ['fill','Fill',[ [['Color','prop-fill','#D9D9D9','color']] ]],
-    ['stroke','Stroke',[ [['Color','prop-stroke','#000000','color'],['Width','prop-strokewidth',1]] ]],
-    ['effects','Effects',[ [['Blur','prop-blur',0],['Shadow','prop-shadow',0]] ]],
-    ['export','Export',[ [['Scale','export-scale',1]] ]]
-  ];
-  $('#view-design').html(sections.map(([id,title,rows]) => `
-    <section>
-      <button class="acc-head" aria-expanded="false" aria-controls="sec-${id}">${title}${ico('chev')}</button>
-      <div class="acc-body" id="sec-${id}" hidden>${rows.map(r => `<div class="row">${r.map(x => f(...x)).join('')}</div>`).join('')}
-        ${id==='export' ? '<button id="btn-export" class="tb-btn border border-line bg-panel justify-self-start">Export PNG</button>' : ''}
-      </div>
-    </section>`).join(''));
 
   // Layer contoh: [nama, ikon, depth, selected] — hapus saat disambung ke layer.js
   const layers = [['Frame 1','frame',0],['Rectangle 106','rect',1,1],['Text','text',1]];
   $('#layer-list').html(layers.map(l =>
     `<li class="layer${l[3]?' selected':''}" style="--depth:${l[2]}">${ico(l[1])}<span class="flex-1 truncate">${l[0]}</span></li>`).join(''));
 
-  // Accordion
-  $('#view-design').on('click', '.acc-head', function () {
-    const open = $(this).attr('aria-expanded') === 'true';
-    $(this).attr('aria-expanded', !open);
-    $('#' + $(this).attr('aria-controls')).prop('hidden', open);
+  // Accordion panel properti (prototype): klik judul / panah = buka-tutup, tombol + = buka
+  const setAcc = ($sec, open) => {
+    $sec.toggleClass('open', open);
+    $sec.find('.fg-body').prop('hidden', !open);
+    $sec.find('.fg-acc-toggle').attr('aria-expanded', open);
+  };
+  $('#view-design').on('click', '.fg-acc-toggle', function () {
+    const $s = $(this).closest('.fg-acc'); setAcc($s, !$s.hasClass('open'));
+  });
+  $('#view-design').on('click', '.fg-add', function () { setAcc($(this).closest('.fg-acc'), true); });
+  // Sinkron swatch warna <-> hex (hanya tampilan)
+  $('#view-design').on('input', '.fg-color input[type="color"]', function () {
+    $(this).siblings('.hex').val(this.value.slice(1).toUpperCase());
+  });
+  $('#view-design').on('input', '.fg-color .hex', function () {
+    if (/^[0-9a-f]{6}$/i.test(this.value)) $(this).siblings('input[type="color"]').val('#' + this.value);
   });
 
   // Tab Design / Code
@@ -468,7 +698,7 @@ $(function () {
       return;
     }
     if (e.shiftKey && e.code === 'KeyP') { e.preventDefault(); pickTool('pencil'); return; }
-    if (e.shiftKey && e.code === 'Digit0') { e.preventDefault(); setZoom('100%'); return; }
+    if (e.shiftKey && e.code === 'Digit0') {  e.preventDefault(); setZoom('100%'); return; }
     if (e.shiftKey && e.code === 'Digit1') { e.preventDefault(); setZoom('Fit'); return; }
     if (e.key === '+' || e.key === '=') { e.preventDefault(); stepZoom(1); return; }
     if (e.key === '-' || e.key === '_') { e.preventDefault(); stepZoom(-1); return; }
